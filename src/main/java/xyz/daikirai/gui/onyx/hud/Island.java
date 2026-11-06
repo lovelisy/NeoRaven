@@ -77,7 +77,7 @@ public final class Island {
     private static final float MARGIN = 10.0F;
     private static final float EDGE = 20.0F;
     /** Same frosted recipe as the keybind card: the surface tint covers 58% of the blurred scene. */
-    private static final float FROST_COVERAGE = 0.36F;
+    private static final float FROST_COVERAGE = 0.58F;
 
     private static final int IDLE = 0;
     private static final int TOGGLE = 1;
@@ -251,8 +251,7 @@ public final class Island {
 
             float radius = pillHeight / 2.0F + (24.0F - pillHeight / 2.0F) * expansion;
             ui.shadow(0.0F, 0.0F, islandWidth, islandHeight, radius, 3);
-            ui.rounded(0.0F, 0.0F, islandWidth, islandHeight, radius,
-                    Material.withAlpha(scheme.surfaceContainerHigh, frosted && Blur.ready() ? 0.28F : 0.55F));
+            ui.rounded(0.0F, 0.0F, islandWidth, islandHeight, radius, scheme.surfaceContainerHigh);
             if (frosted && Blur.ready()) {
                 ui.frost(0.0F, 0.0F, islandWidth, islandHeight, radius, scheme.surfaceContainerHigh,
                         FROST_COVERAGE);
