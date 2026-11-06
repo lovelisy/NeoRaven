@@ -214,11 +214,10 @@ public final class GuiFont {
             Metrics metrics = new Metrics();
             // Match Onyx's upload-before-draw order for both shadow and foreground passes.
             metrics.prepare(text);
-            // The glyph atlas is a GL_INTENSITY texture: its coverage drives both RGB and alpha, so
-            // GL_MODULATE tints the glyphs with the caller's colour instead of multiplying it by
-            // the black RGB an alpha-only texture would expose. Unit 0 must be sampled, texturing
-            // and blending must be on, and lighting must be off. World renderers leave raw
-            // glEnable/glDisable calls behind, and any one of those states being wrong renders
+            // The glyph atlas is an RGBA texture with white RGB and coverage in alpha, so
+            // GL_MODULATE tints the glyphs with the caller's colour. Unit 0 must be sampled,
+            // texturing and blending must be on, and lighting must be off. World renderers leave
+            // raw glEnable/glDisable calls behind, and any one of those states being wrong renders
             // every glyph black, so rebuild them here.
             GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
             GlStateManager.disableLighting();
