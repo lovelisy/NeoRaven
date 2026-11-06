@@ -63,4 +63,4 @@ tasks.jar {
     )
 }
 
-tasks.named<org.gradle.jvm.tasks.Jar>("remapJar") { archiveFileName.set("RavenB4.jar") }
+tasks.named<org.gradle.jvm.tasks.Jar>("remapJar") { archiveFileName.set("NeoRaven.jar") }

@@ -1,26 +1,10 @@
 name: Build and Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Release tag (leave empty for v<version>-build.<run number>)"
-        required: false
-        type: string
-      release_name:
-        description: "Release title (leave empty to use the tag)"
-        required: false
-        type: string
-      prerelease:
-        description: "Mark the release as a pre-release"
-        required: false
-        default: false
-        type: boolean
-      draft:
-        description: "Create the release as a draft"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: write
@@ -64,17 +48,13 @@ jobs:
 
       - name: Read project version and resolve release metadata
         id: meta
-        env:
-          INPUT_TAG: ${{ inputs.tag }}
-          INPUT_NAME: ${{ inputs.release_name }}
         run: |
           set -euo pipefail
           VERSION=$(grep -E '^version = ' build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
-          TAG="${INPUT_TAG:-v${VERSION}-build.${GITHUB_RUN_NUMBER}}"
-          NAME="${INPUT_NAME:-$TAG}"
+          TAG="v${VERSION}-build.${GITHUB_RUN_NUMBER}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "name=$TAG" >> "$GITHUB_OUTPUT"
           echo "Building NeoRaven $VERSION as $TAG"
 
       - name: Build
@@ -89,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NeoRaven
-          path: build/libs/RavenB4.jar
+          path: build/libs/NeoRaven.jar
           if-no-files-found: error
           retention-days: 7
 
@@ -108,7 +88,7 @@ jobs:
         with:
           tag_name: ${{ needs.build.outputs.tag }}
           name: ${{ needs.build.outputs.name }}
-          files: dist/RavenB4.jar
-          draft: ${{ inputs.draft }}
-          prerelease: ${{ inputs.prerelease }}
+          files: dist/NeoRaven.jar
+          draft: false
+          prerelease: false
           generate_release_notes: true
