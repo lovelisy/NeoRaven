@@ -32,7 +32,7 @@ public final class InfoBar {
     private static final float ICON_GAP = 4.0F;
     private static final float MAX_SERVER = 90.0F;
     /** Same frosted recipe as the keybind card: the surface tint covers 58% of the blurred scene. */
-    private static final float FROST_COVERAGE = 0.58F;
+    private static final float FROST_COVERAGE = 0.36F;
 
     private static final String FPS_ICON = "\ue9e4";
     private static final String SERVER_ICON = "\ue875";
@@ -101,7 +101,7 @@ public final class InfoBar {
             float radius = HEIGHT / 2.0F;
             ui.shadow(lastX, lastY, width, HEIGHT, radius, 2);
             ui.rounded(lastX, lastY, width, HEIGHT, radius,
-                    Material.withAlpha(scheme.surfaceContainerHigh, module.frosted() ? 0.90F : 0.97F));
+                    Material.withAlpha(scheme.surfaceContainerHigh, module.frosted() && Blur.ready() ? 0.28F : 0.55F));
             if (module.frosted() && Blur.ready()) {
                 ui.frost(lastX, lastY, width, HEIGHT, radius, scheme.surfaceContainerHigh,
                         FROST_COVERAGE);

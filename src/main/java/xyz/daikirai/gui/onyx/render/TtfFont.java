@@ -287,10 +287,19 @@ public final class TtfFont {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_CLAMP);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL12_MAX_LEVEL, MIP_LEVELS - 1);
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
+        ByteBuffer clear = BufferUtils.createByteBuffer(atlasSize * atlasSize * 4);
+        for (int i = 0; i < atlasSize * atlasSize; i++) {
+            clear.put((byte) 0xFF);
+            clear.put((byte) 0xFF);
+            clear.put((byte) 0xFF);
+            clear.put((byte) 0x00);
+        }
         for (int level = 0; level < MIP_LEVELS; level++) {
             int dimension = atlasSize >> level;
+            clear.clear();
+            clear.limit(dimension * dimension * 4);
             GL11.glTexImage2D(GL11.GL_TEXTURE_2D, level, GL11.GL_RGBA, dimension, dimension, 0,
-                    GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+                    GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, clear);
         }
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 4);
     }

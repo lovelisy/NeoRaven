@@ -52,7 +52,7 @@ public final class Scoreboard {
     private static final float SCORE_GAP = 6.0F;
     private static final float MARGIN = 10.0F;
     private static final float EDGE = 20.0F;
-    private static final float BLUR_COVERAGE = 0.55F;
+    private static final float BLUR_COVERAGE = 0.34F;
     private static final int MAX_ROWS = 15;
     private static final long POLL_MS = 100L;
 
@@ -170,10 +170,9 @@ public final class Scoreboard {
 
     private void drawCard(CustomGuiModule module, Scheme scheme, float width, float height,
                           boolean hasTitle, float rowsTop, boolean scores, float rowMax) {
-        // Opaque backing + a fully opaque frost layer on top, the same recipe as the keybind card.
-        int surface = Material.withAlpha(scheme.surfaceContainerHigh, 1.0F);
         ui.shadow(0.0F, 0.0F, width, height, RADIUS, 3);
-        ui.rounded(0.0F, 0.0F, width, height, RADIUS, surface);
+        ui.rounded(0.0F, 0.0F, width, height, RADIUS,
+                Material.withAlpha(scheme.surfaceContainerHigh, module.scoreboardFrosted() && Blur.ready() ? 0.28F : 0.55F));
         if (module.scoreboardFrosted() && Blur.ready()) {
             ui.frost(0.0F, 0.0F, width, height, RADIUS, scheme.surfaceContainerHigh, BLUR_COVERAGE);
         }

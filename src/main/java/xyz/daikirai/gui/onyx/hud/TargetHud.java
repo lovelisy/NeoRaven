@@ -65,7 +65,7 @@ public final class TargetHud {
     private static final float BAR_Y = 24.0F;
     private static final float BAR_HEIGHT = 6.0F;
     private static final float STATS_Y = 37.0F;
-    private static final float BLUR_COVERAGE = 0.62F;
+    private static final float BLUR_COVERAGE = 0.40F;
     private static final float ANCHOR_GAP = 10.0F;
     private static final float OFF_SCREEN_MARGIN = 28.0F;
     private static final long SWITCH_HOLD_MS = 160L;
@@ -416,9 +416,9 @@ public final class TargetHud {
     // ------------------------------------------------------------------ //
 
     private void drawCard(TargetHudModule module, Scheme scheme, float width) {
-        int surface = Material.withAlpha(scheme.surfaceContainerHigh, 1.0F);
         ui.shadow(0.0F, 0.0F, width, HEIGHT, RADIUS, 3);
-        ui.rounded(0.0F, 0.0F, width, HEIGHT, RADIUS, surface);
+        ui.rounded(0.0F, 0.0F, width, HEIGHT, RADIUS,
+                Material.withAlpha(scheme.surfaceContainerHigh, module.frosted() && Blur.ready() ? 0.28F : 0.55F));
         if (module.frosted() && Blur.ready()) {
             ui.frost(0.0F, 0.0F, width, HEIGHT, RADIUS, scheme.surfaceContainerHigh, BLUR_COVERAGE);
         }

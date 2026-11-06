@@ -62,7 +62,7 @@ public final class PotionHud {
     private static final float NAME_MAX = 110.0F;
     private static final float MARGIN = 10.0F;
     private static final float EDGE = 20.0F;
-    private static final float BLUR_COVERAGE = 0.55F;
+    private static final float BLUR_COVERAGE = 0.34F;
     private static final float ROW_ENTER_MS = 150.0F;
     private static final float ROW_LEAVE_MS = 100.0F;
     private static final int LOW_TIME_TICKS = 200;
@@ -315,9 +315,9 @@ public final class PotionHud {
     // ------------------------------------------------------------------ //
 
     private void drawCard(PotionHudModule module, Scheme scheme, List<Row> rows, float width, float height) {
-        int surface = Material.withAlpha(scheme.surfaceContainerHigh, 1.0F);
         ui.shadow(0.0F, 0.0F, width, height, RADIUS, 3);
-        ui.rounded(0.0F, 0.0F, width, height, RADIUS, surface);
+        ui.rounded(0.0F, 0.0F, width, height, RADIUS,
+                Material.withAlpha(scheme.surfaceContainerHigh, module.frosted() && Blur.ready() ? 0.28F : 0.55F));
         if (module.frosted() && Blur.ready()) {
             ui.frost(0.0F, 0.0F, width, height, RADIUS, scheme.surfaceContainerHigh, BLUR_COVERAGE);
         }

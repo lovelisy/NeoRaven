@@ -56,7 +56,7 @@ public final class ArrayListHud {
     private static final float STRIPE_PAD = 3.0F;
     private static final float MAX_NAME = 140.0F;
     private static final float SUFFIX_GAP = 4.0F;
-    private static final float BLUR_COVERAGE = 0.55F;
+    private static final float BLUR_COVERAGE = 0.34F;
     private static final float SLIDE = 14.0F;
     private static final float ENTER_MS = 250.0F;
     private static final float MOVE_MS = 100.0F;
@@ -311,7 +311,7 @@ public final class ArrayListHud {
                             Material.withAlpha(scheme.surface, 1.0F), BLUR_COVERAGE);
                 } else {
                     ui.rounded(left, pillY, rowWidth, pillH, PILL_RADIUS,
-                            Material.withAlpha(scheme.surface, 0.72F));
+                            Material.withAlpha(scheme.surface, 0.55F));
                 }
                 ui.rounded(left, pillY, rowWidth, pillH, PILL_RADIUS, Material.withAlpha(accent, 0.22F));
                 if (module.outline()) {

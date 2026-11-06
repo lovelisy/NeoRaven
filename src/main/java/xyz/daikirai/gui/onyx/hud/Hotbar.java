@@ -52,7 +52,7 @@ public final class Hotbar {
     private static final float CHAT_LIFT = 14.0F;
     private static final float DURA_W = 12.0F;
     private static final float DURA_H = 2.0F;
-    private static final float BLUR_COVERAGE = 0.62F;
+    private static final float BLUR_COVERAGE = 0.40F;
     private static final long NAME_MS = 2000L;
     private static final int DURA_LOW = 0xFFE05B5B;
     private static final int DURA_HIGH = 0xFF5FD35F;
@@ -200,7 +200,8 @@ public final class Hotbar {
         if (module.hotbarFrosted() && Blur.ready()) {
             ui.frost(0.0F, 0.0F, W, H, RADIUS, surface, BLUR_COVERAGE);
         } else {
-            ui.rounded(0.0F, 0.0F, W, H, RADIUS, surface);
+            ui.rounded(0.0F, 0.0F, W, H, RADIUS,
+                    Material.withAlpha(scheme.surfaceContainerHigh, 0.55F));
         }
 
         float selected = PAD + selection.value() * SLOT;

@@ -75,7 +75,7 @@ public final class Keybinds {
     private static final String KEYBOARD_ICON = "\ue312";
     private static final float ROW_STAGGER = 35.0F;
     /** How much of the surface tint covers the blurred world (the ClickGUI panels use 0.88). */
-    private static final float BLUR_COVERAGE = 0.55F;
+    private static final float BLUR_COVERAGE = 0.34F;
 
     private final UI ui = new UI();
     private final Anim visible = new Anim(0.0F);
@@ -184,13 +184,10 @@ public final class Keybinds {
 
     private void drawCard(KeybindsModule module, Scheme scheme, float width, float height,
                           float targetWidth) {
-        // Opaque backing first: the in-world framebuffer carries an alpha channel and the HUD is
-        // composited through it, so every surface needs an opaque layer underneath. The frosted
-        // layer is drawn on top of it with a full alpha mask, so it shows the blurred world
-        // without ever writing a partial alpha into the world buffer.
         int surface = Material.withAlpha(scheme.surfaceContainerHigh, 1.0F);
         ui.shadow(0.0F, 0.0F, width, height, CARD_RADIUS, 3);
-        ui.rounded(0.0F, 0.0F, width, height, CARD_RADIUS, surface);
+        ui.rounded(0.0F, 0.0F, width, height, CARD_RADIUS,
+                Material.withAlpha(scheme.surfaceContainerHigh, module.frosted() && Blur.ready() ? 0.28F : 0.55F));
         if (module.frosted() && Blur.ready()) {
             ui.frost(0.0F, 0.0F, width, height, CARD_RADIUS, scheme.surfaceContainerHigh, BLUR_COVERAGE);
         }
