@@ -75,6 +75,7 @@ public final class OnyxClickGuiModule extends Module {
     public void guiButtonToggled(xyz.daikirai.module.setting.ButtonSetting button) {
         if (button == resetWindow) {
             Panel.resetOffset();
+            xyz.daikirai.client.ClientConfig.save();
         }
     }
 

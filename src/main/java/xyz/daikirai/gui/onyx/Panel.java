@@ -13,7 +13,9 @@ import xyz.daikirai.module.Module;
 import xyz.daikirai.module.ModuleManager;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The Material You ClickGUI panel, ported from Onyx's {@code UndoneGuiComponent}.
@@ -53,11 +55,13 @@ public final class Panel {
     private String lastQuery = "";
     private Module current;
     private boolean themeOpen;
+    private Category restoredCategory;
     private float lastMouseX;
     private float lastMouseY;
     private static Category lastCategory;
     private static float offsetX;
     private static float offsetY;
+    private static final Map<Category, Float> scrollMemory = new EnumMap<Category, Float>(Category.class);
 
     public Panel() {
         List<Category> categories = new ArrayList<Category>();
@@ -126,7 +130,20 @@ public final class Panel {
         sidebar.bounds(x + PADDING, y + HEADER, Sidebar.WIDTH, BODY_HEIGHT);
         sidebar.update(delta, mouseX, mouseY, listPage);
         list.bounds(searchX(), y + HEADER, x + WIDTH - PADDING - searchX(), BODY_HEIGHT);
+        boolean rememberingScroll = listPage && search.text().isEmpty() && category != null;
+        if (rememberingScroll && restoredCategory != category) {
+            Float remembered = scrollMemory.get(category);
+            if (remembered != null) {
+                list.restoreScroll(remembered);
+            }
+            restoredCategory = category;
+        }
         list.update(delta, mouseX, mouseY, listPage);
+        if (rememberingScroll) {
+            scrollMemory.put(category, list.scrollTarget());
+        } else {
+            restoredCategory = null;
+        }
         detail.bounds(x + PADDING, y + HEADER, WIDTH - PADDING * 2.0F, BODY_HEIGHT);
         detail.update(delta, mouseX, mouseY, !listPage);
         toasts.update(delta);
@@ -303,6 +320,9 @@ public final class Panel {
             detail.drag(mouseX, mouseY, button);
             return;
         }
+        if (list.drag(mouseX, mouseY)) {
+            return;
+        }
         if (dragging && button == 0) {
             this.x = Math.round(Material.clamp(mouseX - dragOffsetX, 96.0F - WIDTH, parentWidth - 96.0F));
             this.y = Math.round(Material.clamp(mouseY - dragOffsetY, 0.0F, parentHeight - HEIGHT));
@@ -398,6 +418,7 @@ public final class Panel {
     public void back() {
         this.page.to(0.0F, 300.0F, Ease.EMPHASIZED_DECELERATE);
         this.themeOpen = false;
+        this.detail.release();
         this.list.focus(true);
     }
 
@@ -409,6 +430,21 @@ public final class Panel {
             this.x = Math.round(Material.clamp((parentWidth - WIDTH) / 2.0F, 96.0F - WIDTH, parentWidth - 96.0F));
             this.y = Math.round(Material.clamp((parentHeight - HEIGHT) / 2.0F, 0.0F, parentHeight - HEIGHT));
         }
+    }
+
+    /** Saved drag offset relative to the screen centre, persisted in the client config. */
+    public static float savedOffsetX() {
+        return offsetX;
+    }
+
+    public static float savedOffsetY() {
+        return offsetY;
+    }
+
+    /** Restores a persisted drag offset; the next {@link #layout} call positions the panel. */
+    public static void restoreOffset(float x, float y) {
+        offsetX = x;
+        offsetY = y;
     }
 
     /** Static reset so the module button can recentre an already-open panel. */

@@ -180,6 +180,7 @@ public final class OnyxClickGui extends GuiScreen {
     public void onGuiClosed() {
         Blur.request();
         OnyxClickGuiModule.sync();
+        xyz.daikirai.client.ClientConfig.save();
     }
 
 }
