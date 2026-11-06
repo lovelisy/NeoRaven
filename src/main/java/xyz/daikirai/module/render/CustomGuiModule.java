@@ -110,6 +110,17 @@ public final class CustomGuiModule extends Module {
             /** The ported bar replaces the vanilla hotbar and experience bar. */
             @SubscribeEvent
             public void onOverlay(RenderGameOverlayEvent.Pre event) {
+                if (ownScreenOpen()
+                        && (event.type == RenderGameOverlayEvent.ElementType.HEALTH
+                        || event.type == RenderGameOverlayEvent.ElementType.FOOD
+                        || event.type == RenderGameOverlayEvent.ElementType.ARMOR
+                        || event.type == RenderGameOverlayEvent.ElementType.AIR
+                        || event.type == RenderGameOverlayEvent.ElementType.HEALTHMOUNT
+                        || event.type == RenderGameOverlayEvent.ElementType.EXPERIENCE
+                        || event.type == RenderGameOverlayEvent.ElementType.HOTBAR)) {
+                    event.setCanceled(true);
+                    return;
+                }
                 if (!replacesHotbar()) {
                     return;
                 }
@@ -120,6 +131,11 @@ public final class CustomGuiModule extends Module {
             }
         };
         MinecraftForge.EVENT_BUS.register(listener);
+    }
+
+    private static boolean ownScreenOpen() {
+        net.minecraft.client.gui.GuiScreen screen = Minecraft.getMinecraft().currentScreen;
+        return screen != null && screen.getClass().getName().startsWith("xyz.daikirai.");
     }
 
     /** Called by the overlay hook: the ported bar replaces the vanilla hotbar. */
