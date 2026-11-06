@@ -105,4 +105,7 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
-          generate_release_notes: true
+          generate_release_notes: false
+          body: |
+            Rolling build of the latest `main`. Always download `NeoRaven.jar` from this release for the newest jar.
+            Title stays `NeoRaven Latest` and the `latest` tag is moved on every push, so the download URL never changes.
