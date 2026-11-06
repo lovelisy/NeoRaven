@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * TrueType font renderer with a mip-mapped alpha atlas, ported from Onyx's {@code render.font.Ayg}.
+ * TrueType font renderer with a mip-mapped intensity atlas, ported from Onyx's {@code render.font.Ayg}.
  *
  * <p>Glyphs are rasterised at up to 192px through java.awt, packed into an atlas with the same
  * 8px margin the original used and simply downscaled by a matrix for smaller sizes. Keeping the
@@ -287,8 +287,8 @@ public final class TtfFont {
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
         for (int level = 0; level < MIP_LEVELS; level++) {
             int dimension = atlasSize >> level;
-            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, level, GL11.GL_ALPHA, dimension, dimension, 0,
-                    GL11.GL_ALPHA, GL11.GL_UNSIGNED_BYTE, BufferUtils.createByteBuffer(dimension * dimension));
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, level, GL11.GL_INTENSITY, dimension, dimension, 0,
+                    GL11.GL_INTENSITY, GL11.GL_UNSIGNED_BYTE, BufferUtils.createByteBuffer(dimension * dimension));
         }
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 4);
     }
@@ -326,7 +326,7 @@ public final class TtfFont {
         ByteBuffer buffer = BufferUtils.createByteBuffer(width * height);
         buffer.put(data, 0, width * height).flip();
         GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, level, x, y, width, height,
-                GL11.GL_ALPHA, GL11.GL_UNSIGNED_BYTE, buffer);
+                GL11.GL_INTENSITY, GL11.GL_UNSIGNED_BYTE, buffer);
     }
 
     private static byte[] downsample(byte[] source, int width, int height, int targetWidth, int targetHeight) {
