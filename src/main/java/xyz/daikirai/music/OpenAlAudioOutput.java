@@ -26,6 +26,7 @@ public final class OpenAlAudioOutput implements AudioOutput {
 
     private volatile boolean running = true;
     private volatile boolean closed = false;
+    private volatile boolean stalled = false;
 
     private OpenAlAudioOutput(ALCcontext context, boolean contextUnknown, int sampleRate, int channels) {
         this.context = context;
@@ -89,13 +90,31 @@ public final class OpenAlAudioOutput implements AudioOutput {
         return OpenAlContext.matches(context, contextUnknown);
     }
 
+    /**
+     * Probes the OpenAL object itself. When the context cannot be compared (launchers that ship a
+     * LWJGL build without {@code alcGetCurrentContext}) a restarted sound system leaves the source
+     * id dangling, and every call against it reports {@code AL_INVALID_NAME}.
+     */
+    private boolean sourceAlive() {
+        if (source == -1) {
+            return false;
+        }
+        try {
+            AL10.alGetError();
+            AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE);
+            return AL10.alGetError() != AL10.AL_INVALID_NAME;
+        } catch (Throwable gone) {
+            return false;
+        }
+    }
+
     private boolean alive() {
-        return !closed && contextAlive();
+        return !closed && contextAlive() && sourceAlive();
     }
 
     @Override
     public boolean isLost() {
-        return !closed && !contextAlive();
+        return !closed && (stalled || !contextAlive() || !sourceAlive());
     }
 
     private void requireAlive() {
@@ -146,6 +165,7 @@ public final class OpenAlAudioOutput implements AudioOutput {
     }
 
     private int takeBuffer() {
+        long deadline = System.currentTimeMillis() + 3000L;
         while (true) {
             synchronized (lock) {
                 if (closed) {
@@ -161,6 +181,10 @@ public final class OpenAlAudioOutput implements AudioOutput {
                     createdBuffers++;
                     return AL10.alGenBuffers();
                 }
+            }
+            if (System.currentTimeMillis() > deadline) {
+                stalled = true;
+                throw new IllegalStateException("game audio stalled");
             }
             sleep(5L);
         }
@@ -180,6 +204,7 @@ public final class OpenAlAudioOutput implements AudioOutput {
         if (pending.position() > 0) {
             submit();
         }
+        long deadline = System.currentTimeMillis() + 4000L;
         while (true) {
             synchronized (lock) {
                 if (closed) {
@@ -193,6 +218,10 @@ public final class OpenAlAudioOutput implements AudioOutput {
                 if (running && AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING) {
                     AL10.alSourcePlay(source);
                 }
+            }
+            if (System.currentTimeMillis() > deadline) {
+                stalled = true;
+                throw new IllegalStateException("game audio stalled");
             }
             sleep(10L);
         }
@@ -223,7 +252,7 @@ public final class OpenAlAudioOutput implements AudioOutput {
             closed = true;
             running = false;
             try {
-                if (contextAlive()) {
+                if (contextAlive() && sourceAlive()) {
                     AL10.alSourceStop(source);
                     AL10.alSourcei(source, AL10.AL_BUFFER, 0);
                     if (source != -1) {
