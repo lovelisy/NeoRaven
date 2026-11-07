@@ -302,6 +302,9 @@ public final class MusicManager {
 
     public void setVolume(float volume) {
         engine.setVolume(volume);
+    }
+
+    public void commitVolume() {
         saveSettings();
     }
 

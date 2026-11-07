@@ -34,6 +34,15 @@ public final class JavaSoundAudioOutput implements AudioOutput {
     }
 
     @Override
+    public void setGain(float gain) {
+    }
+
+    @Override
+    public boolean hasGain() {
+        return false;
+    }
+
+    @Override
     public void flush() {
         line.flush();
     }

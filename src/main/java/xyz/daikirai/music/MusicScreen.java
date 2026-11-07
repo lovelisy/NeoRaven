@@ -428,6 +428,9 @@ public final class MusicScreen extends GuiScreen {
         if (closeCommitted) return false;
         closeCommitted = true;
         restoreIsland();
+        if (draggingVolume) {
+            manager.commitVolume();
+        }
         draggingProgress = draggingVolume = false;
         volumeOpen = false;
         draggingSlider = null;
@@ -790,13 +793,6 @@ public final class MusicScreen extends GuiScreen {
     private float drawSettings(Scheme current, float y) {
         MusicManager m = manager;
         y = settingRowHeader(current, "播放", y);
-        y = sliderRow(current, "音量", Math.round(m.volume() * 100.0F) + "%", y, m.volume(), 0.0F, 1.0F,
-                new FloatSetter() {
-                    @Override
-                    public void set(float value) {
-                        manager.setVolume(value);
-                    }
-                });
         y = chipRow(current, "音质", new String[]{"标准", "较高", "极高", "无损"},
                 new String[]{"standard", "higher", "exhigh", "lossless"},
                 new String[]{m.streamLevel()}, 1, y, new StringSetter() {
@@ -1100,6 +1096,9 @@ public final class MusicScreen extends GuiScreen {
             ui.rounded(volStartX, buttonY - 2.0F, Math.max(4.0F, volW * manager.volume()), 4.0F, 2.0F,
                     current.primary);
             ui.circle(volStartX + volW * manager.volume(), buttonY, 6.0F, current.primary);
+            ui.text(MusicTypeface.CAPTION, Math.round(manager.volume() * 100.0F) + "%",
+                    volStartX + volW / 2.0F, buttonY + 15.0F,
+                    Material.withAlpha(current.onSurfaceVariant, 0.9F), UI.ALIGN_CENTER);
             hits.add(new VolumeHit(volStartX, buttonY - 14.0F, volW, 28.0F, volStartX, volW));
         }
         ui.icon(manager.volume() <= 0.001F ? I_VOLUME_OFF : I_VOLUME, speakerX, buttonY, 19.0F,
@@ -1384,6 +1383,9 @@ public final class MusicScreen extends GuiScreen {
             }
         }
         draggingProgress = false;
+        if (draggingVolume) {
+            manager.commitVolume();
+        }
         draggingVolume = false;
         draggingSlider = null;
         progressPreview = -1.0F;
@@ -1504,10 +1506,12 @@ public final class MusicScreen extends GuiScreen {
         }
         if (key == 200) {
             manager.setVolume(Math.min(1.0F, manager.volume() + 0.05F));
+            manager.commitVolume();
             return;
         }
         if (key == 208) {
             manager.setVolume(Math.max(0.0F, manager.volume() - 0.05F));
+            manager.commitVolume();
             return;
         }
         if (key == 203) {

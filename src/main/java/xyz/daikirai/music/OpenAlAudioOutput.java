@@ -36,6 +36,22 @@ public final class OpenAlAudioOutput implements AudioOutput {
         this.pending = BufferUtils.createByteBuffer(chunkBytes);
     }
 
+    @Override
+    public void setGain(float gain) {
+        synchronized (lock) {
+            if (!alive() || source == -1) {
+                return;
+            }
+            AL10.alSourcef(source, AL10.AL_GAIN, Math.max(0.0F, Math.min(1.0F, gain)));
+            AL10.alGetError();
+        }
+    }
+
+    @Override
+    public boolean hasGain() {
+        return true;
+    }
+
     public static OpenAlAudioOutput open(int sampleRate, int channels) {
         if (sampleRate <= 0 || channels <= 0) {
             return null;

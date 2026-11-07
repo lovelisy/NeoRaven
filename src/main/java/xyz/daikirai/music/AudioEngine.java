@@ -50,6 +50,10 @@ public final class AudioEngine {
 
     public void setVolume(float value) {
         this.volume = clamp(value, 0.0F, 1.0F);
+        AudioOutput current = this.line;
+        if (current != null && current.hasGain()) {
+            current.setGain(this.volume);
+        }
     }
 
     public float volume() {
@@ -270,12 +274,14 @@ public final class AudioEngine {
                 throw new IOException("no audio output available");
             }
             this.line = output;
+            if (output.hasGain()) {
+                output.setGain(volume);
+            }
             this.buffering = false;
             this.positionMs = baseMs;
 
             long playedFrames = 0L;
             byte[] pcm = new byte[1152 * 2 * 2];
-            float gainStep = 256.0F / Math.max(1, frequency);
 
             while (!disposed) {
                 if (serial != trackSerial) {
@@ -332,17 +338,19 @@ public final class AudioEngine {
                     continue;
                 }
 
-                float targetGain = volume;
-                this.gain = this.gain < targetGain
-                        ? Math.min(targetGain, this.gain + gainStep)
-                        : Math.max(targetGain, this.gain - gainStep);
-
                 // JLayer's getBufferLength() counts *interleaved* samples: bufferp advances by
                 // `channels` for every frame. Treating it as a frame count made the position run
                 // at 2x on stereo, which is what put the progress bar far ahead of the audio.
                 int interleaved = buffer.getBufferLength();
                 int frames = Math.max(0, interleaved / Math.max(1, channels));
-                int bytes = toPcm16(buffer.getBuffer(), interleaved, channels, this.gain, pcm);
+                float fadeStep = frames / Math.max(1.0F, frequency * 0.08F);
+                this.gain = Math.min(1.0F, this.gain + fadeStep);
+                boolean hardwareGain = output.hasGain();
+                if (hardwareGain) {
+                    output.setGain(volume);
+                }
+                float appliedGain = hardwareGain ? this.gain : this.gain * volume;
+                int bytes = toPcm16(buffer.getBuffer(), interleaved, channels, appliedGain, pcm);
                 if (bytes > 0) {
                     if (output.isLost()) {
                         throw new IOException("game audio restarted");
