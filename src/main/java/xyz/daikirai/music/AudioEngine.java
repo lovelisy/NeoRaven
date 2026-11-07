@@ -18,8 +18,14 @@ public final class AudioEngine {
         void onTrackEnded();
     }
 
+    public static final int OUTPUT_AUTO = 0;
+    public static final int OUTPUT_JAVA_SOUND = 1;
+    public static final int OUTPUT_GAME = 2;
+
     private final Object lock = new Object();
 
+    private volatile int outputMode = OUTPUT_AUTO;
+    private volatile String activeOutput = "";
     private volatile boolean disposed;
     private volatile File file;
     private volatile boolean wantPlay;
@@ -48,6 +54,31 @@ public final class AudioEngine {
 
     public float volume() {
         return volume;
+    }
+
+    public void setOutputMode(int value) {
+        int mode = value == OUTPUT_JAVA_SOUND || value == OUTPUT_GAME ? value : OUTPUT_AUTO;
+        if (mode == this.outputMode) {
+            return;
+        }
+        synchronized (lock) {
+            this.outputMode = mode;
+            if (file != null) {
+                if (wantPlay) {
+                    this.seekRequestMs = Math.max(0L, positionMs);
+                }
+                this.trackSerial++;
+                lock.notifyAll();
+            }
+        }
+    }
+
+    public int outputMode() {
+        return outputMode;
+    }
+
+    public String activeOutput() {
+        return activeOutput;
     }
 
     public void setDurationMs(long value) {
@@ -354,12 +385,41 @@ public final class AudioEngine {
         }
     }
 
-    private static AudioOutput openOutput(int frequency, int channels) {
-        OpenAlAudioOutput openal = OpenAlAudioOutput.open(frequency, channels);
-        if (openal != null) {
-            return openal;
+    private AudioOutput openOutput(int frequency, int channels) {
+        boolean gameFirst = outputMode == OUTPUT_GAME
+                || (outputMode == OUTPUT_AUTO && AudioRuntime.preferGameAudio());
+        AudioOutput preferred = gameFirst
+                ? openGame(frequency, channels)
+                : openJavaSound(frequency, channels);
+        if (preferred != null) {
+            this.activeOutput = gameFirst ? "game OpenAL" : "Java Sound";
+            return preferred;
         }
-        return JavaSoundAudioOutput.open(frequency, channels);
+        AudioOutput fallback = gameFirst
+                ? openJavaSound(frequency, channels)
+                : openGame(frequency, channels);
+        if (fallback != null) {
+            this.activeOutput = gameFirst ? "Java Sound" : "game OpenAL";
+            return fallback;
+        }
+        this.activeOutput = "";
+        return null;
+    }
+
+    private AudioOutput openGame(int frequency, int channels) {
+        try {
+            return OpenAlAudioOutput.open(frequency, channels);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private AudioOutput openJavaSound(int frequency, int channels) {
+        try {
+            return JavaSoundAudioOutput.open(frequency, channels);
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     private static SampleBuffer decode(Decoder decoder, Header header, Bitstream stream) throws Exception {

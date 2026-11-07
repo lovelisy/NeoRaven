@@ -803,6 +803,18 @@ public final class MusicScreen extends GuiScreen {
                         manager.setStreamLevel(value);
                     }
                 });
+        final int outputMode = m.outputMode();
+        y = chipRow(current, "音频输出", new String[]{"自动", "Java Sound", "游戏 OpenAL"},
+                new String[]{"auto", "java", "game"},
+                new String[]{outputMode == AudioEngine.OUTPUT_JAVA_SOUND ? "java"
+                        : outputMode == AudioEngine.OUTPUT_GAME ? "game" : "auto"},
+                1, y, new StringSetter() {
+                    @Override
+                    public void set(String value) {
+                        manager.setOutputMode("java".equals(value) ? AudioEngine.OUTPUT_JAVA_SOUND
+                                : "game".equals(value) ? AudioEngine.OUTPUT_GAME : AudioEngine.OUTPUT_AUTO);
+                    }
+                });
         y = settingRowHeader(current, "外观", y);
         y = switchRow(current, "封面取色", "整个界面按专辑封面重新配色", y, m.coverTint(),
                 new BooleanSetter() {
@@ -842,7 +854,11 @@ public final class MusicScreen extends GuiScreen {
         ui.text(MusicTypeface.BODY, logged ? "已登录：" + m.profile().nickname : "未登录，仅能播放试听/免费曲目",
                 CT_X + 156.0F, y + 25.0F, current.onSurfaceVariant, UI.ALIGN_LEFT);
         y += 56.0F;
-        ui.text(MusicTypeface.CAPTION, "音频输出：游戏 OpenAL（与游戏声音共用混音）",
+        String active = m.activeOutput();
+        String outputLabel = active.isEmpty()
+                ? (AudioRuntime.preferGameAudio() ? "自动（安卓环境，将用游戏 OpenAL）" : "自动（桌面环境，将用 Java Sound）")
+                : ("当前：" + active);
+        ui.text(MusicTypeface.CAPTION, "音频输出：" + outputLabel,
                 CT_X + 8.0F, y + 10.0F, Material.withAlpha(current.onSurfaceVariant, 0.7F), UI.ALIGN_LEFT);
         return y + 28.0F;
     }
@@ -1074,10 +1090,15 @@ public final class MusicScreen extends GuiScreen {
                 manager.toggleShuffle();
             }
         }));
-        rightX -= 44.0F;
-        ui.icon(manager.volume() <= 0.001F ? I_VOLUME_OFF : I_VOLUME, rightX, buttonY, 19.0F,
+        float volStartX = px + pw - 150.0F;
+        float volW = 120.0F;
+        ui.icon(manager.volume() <= 0.001F ? I_VOLUME_OFF : I_VOLUME, volStartX - 18.0F, buttonY, 19.0F,
                 Material.withAlpha(current.onSurfaceVariant, 0.9F));
-        hits.add(new VolumeHit(rightX - 16.0F, buttonY - 16.0F, 32.0F, 32.0F, px + pw - 150.0F));
+        ui.rounded(volStartX, buttonY - 2.0F, volW, 4.0F, 2.0F, current.surfaceContainerHighest);
+        ui.rounded(volStartX, buttonY - 2.0F, Math.max(4.0F, volW * manager.volume()), 4.0F, 2.0F,
+                current.primary);
+        ui.circle(volStartX + volW * manager.volume(), buttonY, 6.0F, current.primary);
+        hits.add(new VolumeHit(volStartX, buttonY - 14.0F, volW, 28.0F, volStartX));
 
         if (manager.isLoadingTrack() || manager.engine().isBuffering()) {
             ui.text(MusicTypeface.CAPTION, manager.isLoadingTrack() ? "缓冲中…" : "解码中…",
