@@ -278,15 +278,15 @@ public final class CustomGuiModule extends Module {
     }
 
     public static float interfaceFontSize() {
-        return fontSize == null ? 1.0F : (float) fontSize.getInput();
+        return replacesFont() && fontSize != null ? (float) fontSize.getInput() : 1.0F;
     }
 
     public static float interfaceFontSpacing() {
-        return fontSpacing == null ? 0.0F : (float) fontSpacing.getInput();
+        return replacesFont() && fontSpacing != null ? (float) fontSpacing.getInput() : 0.0F;
     }
 
     public static boolean interfaceFontShadow() {
-        return fontShadow != null && fontShadow.isToggled();
+        return replacesFont() && fontShadow != null && fontShadow.isToggled();
     }
 
     public static float fontSpacing() {

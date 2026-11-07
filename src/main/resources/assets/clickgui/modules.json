@@ -9403,9 +9403,9 @@
         "prefix": "",
         "suffix": " px",
         "value": 0.0,
-        "min": -3.0,
-        "max": 3.0,
-        "step": 0.25,
+        "min": -5.0,
+        "max": 5.0,
+        "step": 0.5,
         "options": null,
         "labels": null
       },

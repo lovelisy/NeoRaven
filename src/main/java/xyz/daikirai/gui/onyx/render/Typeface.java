@@ -299,7 +299,8 @@ public final class Typeface {
                 total += run.width(text.substring(i, j)) * (primary.size() / run.size());
                 i = j;
             }
-            float extra = text.length() > 1 ? Typeface.spacing() * (text.length() - 1) : 0.0F;
+            float gap = fixed ? 0.0F : Typeface.spacing();
+            float extra = text.length() > 1 ? gap * (text.length() - 1) : 0.0F;
             return Math.max(0.0F, total * scale() + extra);
         }
 
@@ -310,13 +311,41 @@ public final class Typeface {
          */
         public void draw(String text, int color) {
             TtfFont primary = font();
+            float gap = fixed ? 0.0F : Typeface.spacing();
+            boolean shadow = !fixed && Typeface.shadow();
+            float inverse = gap == 0.0F ? 0.0F : gap / Math.max(0.0001F, scale());
+            if (gap == 0.0F && !shadow) {
+                runDraw(primary, text, color);
+                return;
+            }
+            int shadowColor = shadow ? darken(color) : 0;
+            float x = 0.0F;
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
+                TtfFont run = run(primary, c);
+                float relative = primary.size() / run.size();
+                String part = String.valueOf(c);
+                net.minecraft.client.renderer.GlStateManager.pushMatrix();
+                net.minecraft.client.renderer.GlStateManager.translate(x, 0.0F, 0.0F);
+                if (relative != 1.0F) {
+                    net.minecraft.client.renderer.GlStateManager.scale(relative, relative, 1.0F);
+                }
+                if (shadow) {
+                    float shift = 2.0F / Math.max(0.0001F, scale() * relative);
+                    net.minecraft.client.renderer.GlStateManager.pushMatrix();
+                    net.minecraft.client.renderer.GlStateManager.translate(shift, shift, 0.0F);
+                    run.draw(part, shadowColor);
+                    net.minecraft.client.renderer.GlStateManager.popMatrix();
+                }
+                run.draw(part, color);
+                net.minecraft.client.renderer.GlStateManager.popMatrix();
+                x += run.width(part) * relative + (i == text.length() - 1 ? 0.0F : inverse);
+            }
+        }
+
+        private void runDraw(TtfFont primary, String text, int color) {
             float x = 0.0F;
             int i = 0;
-            float extra = Typeface.spacing();
-            boolean shadow = Typeface.shadow();
-            int shadowColor = shadow ? darken(color) : 0;
-            float inverse = extra == 0.0F ? 0.0F : extra / Math.max(0.0001F, scale());
-            float shadowShift = 2.0F / Math.max(0.0001F, scale());
             while (i < text.length()) {
                 TtfFont run = run(primary, text.charAt(i));
                 int j = i;
@@ -330,16 +359,9 @@ public final class Typeface {
                 if (relative != 1.0F) {
                     net.minecraft.client.renderer.GlStateManager.scale(relative, relative, 1.0F);
                 }
-                if (shadow) {
-                    net.minecraft.client.renderer.GlStateManager.pushMatrix();
-                    net.minecraft.client.renderer.GlStateManager.translate(shadowShift, shadowShift, 0.0F);
-                    run.draw(part, shadowColor);
-                    net.minecraft.client.renderer.GlStateManager.popMatrix();
-                }
                 run.draw(part, color);
                 net.minecraft.client.renderer.GlStateManager.popMatrix();
-                x += run.width(part) * relative
-                        + inverse * Math.max(0, part.length() - (j == text.length() ? 1 : 0));
+                x += run.width(part) * relative;
                 i = j;
             }
         }
