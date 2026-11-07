@@ -217,7 +217,8 @@ public final class Typeface {
     }
 
     private static int darken(int color) {
-        return (color & 0xFF000000) | ((color & 0xFCFCFC) >> 2);
+        int alpha = Math.round((color >>> 24) * 0.55F);
+        return alpha << 24;
     }
 
     private static TtfFont font(boolean medium, float optical) {
@@ -315,7 +316,7 @@ public final class Typeface {
             boolean shadow = Typeface.shadow();
             int shadowColor = shadow ? darken(color) : 0;
             float inverse = extra == 0.0F ? 0.0F : extra / Math.max(0.0001F, scale());
-            float shadowShift = 1.0F / Math.max(0.0001F, scale());
+            float shadowShift = 2.0F / Math.max(0.0001F, scale());
             while (i < text.length()) {
                 TtfFont run = run(primary, text.charAt(i));
                 int j = i;
