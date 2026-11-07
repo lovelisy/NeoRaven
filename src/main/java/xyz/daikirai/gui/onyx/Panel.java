@@ -181,13 +181,13 @@ public final class Panel {
     }
 
     private float rightLabelWidth() {
-        String label = page.target() >= 0.5F ? currentCategoryLabel() : category.name();
+        String label = page.target() >= 0.5F ? currentCategoryLabel() : Icons.label(category);
         return Typeface.LABEL.width(label);
     }
 
     private String currentCategoryLabel() {
         if (themeOpen) {
-            return "Onyx ClickGUI";
+            return xyz.daikirai.util.Lang.text("Onyx ClickGUI");
         }
         return current == null ? "" : Icons.label(current.moduleCategory());
     }
@@ -240,7 +240,7 @@ public final class Panel {
             String label;
             if (!search.text().isEmpty()) {
                 int results = list.size();
-                label = results == 1 ? "1 result" : results + " results";
+                label = results == 1 ? xyz.daikirai.util.Lang.text("1 result") : results + " " + xyz.daikirai.util.Lang.text("results");
             } else {
                 label = Icons.label(category);
             }
@@ -255,7 +255,7 @@ public final class Panel {
                         Material.withAlpha(scheme.onSurface, 0.08F * backHover.value()));
             }
             ui.icon(Icons.ARROW_BACK, chipX + 13.0F, chipY + 13.0F, 15.0F, scheme.onSurface);
-            String title = themeOpen || current == null ? "Theme" : Text.strip(current.getName());
+            String title = themeOpen || current == null ? xyz.daikirai.util.Lang.text("Theme") : Text.strip(current.localizedName());
             ui.text(Typeface.HEADLINE, ui.truncate(Typeface.HEADLINE, title, 340.0F),
                     chipX + 26.0F + 8.0F, y + HEADER / 2.0F, scheme.onSurface, UI.ALIGN_LEFT);
             ui.text(Typeface.LABEL, currentCategoryLabel(), x + WIDTH - PADDING - 6.0F, y + HEADER / 2.0F,
@@ -385,7 +385,7 @@ public final class Panel {
                 Module selected = list.openSelected();
                 if (selected != null) {
                     selected.toggle();
-                    toasts.show(Text.strip(selected.getName()) + (selected.isEnabled() ? " on" : " off"));
+                    toasts.show(Text.strip(selected.localizedName()) + (selected.isEnabled() ? " " + xyz.daikirai.util.Lang.text("on") : " " + xyz.daikirai.util.Lang.text("off")));
                 }
                 return true;
             }

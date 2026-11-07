@@ -84,7 +84,7 @@ public final class SearchField {
         float maxText = w - 28.0F - clearSpace;
 
         if (text.isEmpty() && !focused) {
-            ui.text(Typeface.BODY_MEDIUM, "Search modules", textStart, centerY,
+            ui.text(Typeface.BODY_MEDIUM, xyz.daikirai.util.Lang.text("Search modules"), textStart, centerY,
                     Material.withAlpha(scheme.onSurfaceVariant, 0.7F), UI.ALIGN_LEFT);
         } else {
             String visible = ui.truncate(Typeface.BODY_MEDIUM, text.isEmpty() ? "" : text, maxText);

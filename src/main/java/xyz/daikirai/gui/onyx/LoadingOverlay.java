@@ -91,7 +91,7 @@ public final class LoadingOverlay {
             int fill = hover ? Material.mix(scheme.primaryContainer, scheme.primary, 0.18F)
                     : scheme.primaryContainer;
             ui.rounded(bx, by, CANCEL_WIDTH, CANCEL_HEIGHT, CANCEL_HEIGHT / 2.0F, fill);
-            ui.text(Typeface.LABEL, "Cancel", bx + CANCEL_WIDTH / 2.0F, by + CANCEL_HEIGHT / 2.0F,
+            ui.text(Typeface.LABEL, xyz.daikirai.util.Lang.text("Cancel"), bx + CANCEL_WIDTH / 2.0F, by + CANCEL_HEIGHT / 2.0F,
                     scheme.onPrimaryContainer, UI.ALIGN_CENTER);
         } finally {
             ui.end();

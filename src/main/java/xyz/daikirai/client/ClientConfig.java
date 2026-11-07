@@ -34,6 +34,7 @@ public final class ClientConfig {
             }
             FileWriter w = new FileWriter(file, false);
             write(w, "default_profile", defaultProfile == null ? "" : defaultProfile);
+            write(w, "language", xyz.daikirai.util.Lang.locale());
             write(w, "save_categories", GuiModule.saveCategoryPositions.isToggled());
             if (ClickGui.categories != null) {
                 for (CategoryComponent c : ClickGui.categories) {
@@ -69,6 +70,8 @@ public final class ClientConfig {
                     String key = kv[0], value = kv[1];
                     if (key.equals("default_profile")) {
                         defaultProfile = value;
+                    } else if (key.equals("language")) {
+                        xyz.daikirai.util.Lang.setLocale(value);
                     } else if (key.equals("save_categories")) {
                         GuiModule.saveCategoryPositions.setEnabled(value.equals("true"));
                         GuiModule.saveCategoryPositions.updateLabel();
@@ -124,6 +127,7 @@ public final class ClientConfig {
         } else {
             xyz.daikirai.gui.onyx.Panel.restoreOffset(onyxPanelX, onyxPanelY);
         }
+        xyz.daikirai.gui.onyx.OnyxClickGuiModule.refreshLanguageSetting();
         Profiles.loadAll();
         xyz.daikirai.module.minigames.SpeedBuildersModule.loadTimes();
     }

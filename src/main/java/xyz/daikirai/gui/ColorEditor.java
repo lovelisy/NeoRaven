@@ -299,7 +299,7 @@ public final class ColorEditor extends GuiScreen {
         ui.rounded(MARGIN, HEADER_Y, BADGE, BADGE, BADGE / 2.0F, s.primaryContainer);
         ui.icon(Icons.PALETTE, MARGIN + BADGE / 2.0F, HEADER_Y + BADGE / 2.0F, 21.0F, s.onPrimaryContainer);
 
-        String title = Text.strip(setting.getName());
+        String title = Text.strip(setting.localizedName());
         float titleWidth = CLOSE_X - 12.0F - (MARGIN + 52.0F);
         ui.text(Typeface.HEADLINE, ui.truncate(Typeface.HEADLINE, title, titleWidth),
                 MARGIN + 52.0F, HEADER_Y + BADGE / 2.0F, s.onSurface, UI.ALIGN_LEFT);
@@ -343,8 +343,8 @@ public final class ColorEditor extends GuiScreen {
                     Material.withAlpha(s.onSurface, 0.07F));
         }
 
-        segmentLabel(Icons.TONALITY, "Follow theme", themeCenter, centerY, theme, s);
-        segmentLabel(Icons.BRUSH, "Custom", customCenter, centerY, !theme, s);
+        segmentLabel(Icons.TONALITY, xyz.daikirai.util.Lang.text("Follow theme"), themeCenter, centerY, theme, s);
+        segmentLabel(Icons.BRUSH, xyz.daikirai.util.Lang.text("Custom"), customCenter, centerY, !theme, s);
     }
 
     private void segmentLabel(String icon, String label, float centerX, float y, boolean active, Scheme s) {

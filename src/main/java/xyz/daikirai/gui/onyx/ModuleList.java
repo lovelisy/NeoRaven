@@ -50,10 +50,11 @@ public final class ModuleList {
     private float contentHeight;
     private Module selected;
     private boolean focused;
-    private String emptyText = "No modules here yet";
+    private String emptyText = xyz.daikirai.util.Lang.text("No modules here yet");
     private Category builtCategory;
     private String builtQuery = "";
     private int builtRevision = -1;
+    private int builtLanguage = -1;
 
     /** Opens the detail page for a module (right click / keyboard). */
     public interface Opener {
@@ -65,6 +66,7 @@ public final class ModuleList {
         this.builtCategory = category;
         this.builtQuery = query == null ? "" : query;
         this.builtRevision = Profiles.revision();
+        this.builtLanguage = xyz.daikirai.util.Lang.revision();
         cards.clear();
         byModule.clear();
         String needle = this.builtQuery.trim().toLowerCase(Locale.ROOT);
@@ -104,7 +106,7 @@ public final class ModuleList {
             byModule.put(module, card);
         }
 
-        this.emptyText = !needle.isEmpty() ? "No modules match" : "No modules here yet";
+        this.emptyText = xyz.daikirai.util.Lang.text(!needle.isEmpty() ? "No modules match" : "No modules here yet");
         this.contentHeight = cards.size() * (CARD_HEIGHT + GAP) - GAP;
         this.scrollTarget = 0.0F;
         this.scroll.set(0.0F);
@@ -119,6 +121,9 @@ public final class ModuleList {
 
     private static boolean matches(Module module, String needle) {
         if (module.getName() != null && module.getName().toLowerCase(Locale.ROOT).contains(needle)) {
+            return true;
+        }
+        if (module.localizedName().toLowerCase(Locale.ROOT).contains(needle)) {
             return true;
         }
         if (module.getInfo() != null && module.getInfo().toLowerCase(Locale.ROOT).contains(needle)) {
@@ -162,7 +167,7 @@ public final class ModuleList {
     }
 
     public void update(float delta, float mouseX, float mouseY, boolean interactive) {
-        if (builtRevision != Profiles.revision()) {
+        if (builtRevision != Profiles.revision() || builtLanguage != xyz.daikirai.util.Lang.revision()) {
             setContent(builtCategory, builtQuery);
         }
         this.scroll.to(scrollTarget, 250.0F, Ease.DECELERATE);
@@ -407,7 +412,7 @@ public final class ModuleList {
             // Command Line, ...) get no switch at all instead of a dead control.
             boolean showSwitch = !module.noToggle;
             float textWidth = w - 12.0F - 10.0F - (showSwitch ? 38.0F + 12.0F : 0.0F);
-            String title = ui.truncate(Typeface.HEADLINE, Text.strip(module.getName()), textWidth);
+            String title = ui.truncate(Typeface.HEADLINE, Text.strip(module.localizedName()), textWidth);
             String sub = subtitle();
             float titleY = !showSwitch && sub.isEmpty() ? y + h / 2.0F : y + h * 0.32F;
             ui.text(Typeface.HEADLINE, title, x + 12.0F, titleY, titleColor, UI.ALIGN_LEFT);

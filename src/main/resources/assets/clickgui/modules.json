@@ -8989,6 +8989,21 @@
         "labels": null
       },
       {
+        "t": "mode",
+        "name": "Language",
+        "prefix": "",
+        "suffix": "",
+        "value": 0.0,
+        "min": 0.0,
+        "max": 1.0,
+        "step": 1.0,
+        "options": [
+          "Chinese",
+          "English"
+        ],
+        "labels": null
+      },
+      {
         "t": "toggle",
         "name": "Follow GUI scale",
         "value": true

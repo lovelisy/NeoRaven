@@ -105,7 +105,7 @@ public final class TabList {
 
     public void draw(UI ui, Scheme scheme, float progress) {
         ui.icon("\ue7ef", 18.0F, 18.0F, 15.0F, scheme.primary);
-        ui.text(Typeface.LABEL, "Players", 32.0F, 18.0F, scheme.onSurface, UI.ALIGN_LEFT);
+        ui.text(Typeface.LABEL, xyz.daikirai.util.Lang.text("Players"), 32.0F, 18.0F, scheme.onSurface, UI.ALIGN_LEFT);
         String count = String.valueOf(players.size());
         float countWidth = Math.max(24.0F, Typeface.CAPTION.width(count) + 14.0F);
         ui.rounded(width - countWidth - 12.0F, 9.0F, countWidth, 18.0F, 9.0F, scheme.primaryContainer);
@@ -118,7 +118,7 @@ public final class TabList {
                     Material.withAlpha(scheme.outlineVariant, 0.45F));
         }
         if (players.isEmpty()) {
-            ui.text(Typeface.CAPTION, "No players", width / 2.0F, rowsY + ROW / 2.0F,
+            ui.text(Typeface.CAPTION, xyz.daikirai.util.Lang.text("No players"), width / 2.0F, rowsY + ROW / 2.0F,
                     scheme.onSurfaceVariant, UI.ALIGN_CENTER);
         }
         for (int i = 0; i < players.size(); i++) {

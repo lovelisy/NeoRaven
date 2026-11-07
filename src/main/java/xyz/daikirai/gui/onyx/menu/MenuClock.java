@@ -174,6 +174,6 @@ public final class MenuClock {
 
     /** Label for the clock-style button's accessibility text (English like the rest of the menu). */
     public static String styleName() {
-        return style() == MenuTheme.CLOCK_ANALOG ? "Analog clock" : "Digital clock";
+        return xyz.daikirai.util.Lang.text(style() == MenuTheme.CLOCK_ANALOG ? "Analog clock" : "Digital clock");
     }
 }
