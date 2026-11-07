@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraft.client.gui.GuiScreen;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -12,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.lwjgl.opengl.Display;
 import xyz.daikirai.gui.onyx.render.GuiFont;
+import xyz.daikirai.gui.onyx.render.GuiOpenAnimation;
 
 import java.io.IOException;
 
@@ -20,16 +22,15 @@ public class MixinMinecraft {
     /** Frame rate used while the window is unfocused or minimized. */
     private static final int HIDDEN_FPS = 20;
 
-    private static boolean onyx$customScreen(GuiScreen screen) {
-        return screen != null && screen.getClass().getName().startsWith("xyz.daikirai.");
+    @Shadow public GuiScreen currentScreen;
+
+    @Inject(method = "displayGuiScreen", at = @At("RETURN"))
+    private void onyx$screenOpened(GuiScreen requested, CallbackInfo ci) {
+        GuiOpenAnimation.opened(currentScreen);
     }
 
     @Redirect(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiScreen;handleInput()V"))
     private void onyx$screenInput(GuiScreen screen) throws IOException {
-        if (!onyx$customScreen(screen)) {
-            screen.handleInput();
-            return;
-        }
         GuiFont.begin();
         try {
             screen.handleInput();
@@ -40,10 +41,6 @@ public class MixinMinecraft {
 
     @Redirect(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiScreen;handleMouseInput()V"))
     private void onyx$mouseInput(GuiScreen screen) throws IOException {
-        if (!onyx$customScreen(screen)) {
-            screen.handleMouseInput();
-            return;
-        }
         GuiFont.begin();
         try {
             screen.handleMouseInput();
@@ -54,10 +51,6 @@ public class MixinMinecraft {
 
     @Redirect(method = "runTick", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiScreen;updateScreen()V"))
     private void onyx$screenTick(GuiScreen screen) {
-        if (!onyx$customScreen(screen)) {
-            screen.updateScreen();
-            return;
-        }
         GuiFont.begin();
         try {
             screen.updateScreen();
@@ -69,10 +62,6 @@ public class MixinMinecraft {
     @Redirect(method = {"displayGuiScreen", "resize"}, at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/gui/GuiScreen;setWorldAndResolution(Lnet/minecraft/client/Minecraft;II)V"))
     private void onyx$screenInit(GuiScreen screen, Minecraft mc, int width, int height) {
-        if (!onyx$customScreen(screen)) {
-            screen.setWorldAndResolution(mc, width, height);
-            return;
-        }
         GuiFont.begin();
         try {
             screen.setWorldAndResolution(mc, width, height);
@@ -91,9 +80,11 @@ public class MixinMinecraft {
      *
      * <p>Vanilla's {@code Minecraft#getLimitFramerate()} is
      * {@code theWorld == null && currentScreen != null ? 30 : gameSettings.limitFramerate}, and the
-     * render loop feeds it to {@code Display.sync}. That is exactly the title screen and every
-     * screen opened from it without a world, including the ClickGUI: those were drawn once every
-     * 33.3 ms while the same client runs at several hundred fps in-world.</p>
+     * render loop feeds it to {@code Display.sync}. That is exactly the title screen: the rewritten
+     * menu - and everything opened from it, the world list, the settings sheet and the ClickGUI -
+     * was drawn once every 33.3 ms while the same client runs at several hundred fps in-world. The
+     * menu therefore looked laggy, and the dock springs, the closing sheet and the wallpaper
+     * parallax all stepped at 30 Hz.</p>
      *
      * <p>Screens now follow the game's own Max Framerate setting, so in-world and out-of-world
      * frames are limited by the same number (260 means "unlimited" in 1.8.9's options, and the

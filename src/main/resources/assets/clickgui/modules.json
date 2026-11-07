@@ -9401,6 +9401,45 @@
       },
       {
         "t": "toggle",
+        "name": "Open animation",
+        "value": true
+      },
+      {
+        "t": "slider",
+        "name": "Open animation: Duration",
+        "prefix": "",
+        "suffix": " ms",
+        "value": 300.0,
+        "min": 80.0,
+        "max": 600.0,
+        "step": 10.0,
+        "options": null,
+        "labels": null
+      },
+      {
+        "t": "slider",
+        "name": "Open animation: Scale from",
+        "prefix": "",
+        "suffix": "x",
+        "value": 0.92,
+        "min": 0.5,
+        "max": 1.0,
+        "step": 0.01,
+        "options": null,
+        "labels": null
+      },
+      {
+        "t": "toggle",
+        "name": "Open animation: Fade",
+        "value": true
+      },
+      {
+        "t": "toggle",
+        "name": "Open animation: Centered containers",
+        "value": true
+      },
+      {
+        "t": "toggle",
         "name": "Hotbar",
         "value": true
       },

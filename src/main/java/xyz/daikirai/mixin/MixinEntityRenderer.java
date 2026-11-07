@@ -5,10 +5,11 @@ import xyz.daikirai.module.render.CameraModules;
 import xyz.daikirai.module.render.FreelookModule;
 import xyz.daikirai.module.render.HandOutlineModule;
 import xyz.daikirai.module.render.ZoomModule;
-import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.ItemRenderer;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.Entity;
+import xyz.daikirai.gui.onyx.render.GuiOpenAnimation;
+import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraft.util.MovingObjectPosition;
@@ -65,29 +66,37 @@ public class MixinEntityRenderer {
         return CameraModule.cameraAngle(entity, entity.prevRotationPitch, true, true);
     }
 
-    @Inject(method = "setupCameraTransform", at = @At("HEAD"))
-    private void clickgui$zoomFrame(float partialTicks, int pass, CallbackInfo ci) {
-        ZoomModule.tickStatic();
+    @Redirect(method = "updateCameraAndRender", at = @At(value = "INVOKE",
+            target = "Lnet/minecraftforge/client/ForgeHooksClient;drawScreen(Lnet/minecraft/client/gui/GuiScreen;IIF)V", remap = false))
+    private void onyx$drawScreen(GuiScreen screen, int mouseX, int mouseY, float partialTicks) {
+        GuiOpenAnimation.drawScreen(screen, mouseX, mouseY, partialTicks);
     }
 
-    @Redirect(method = "updateCameraAndRender", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiScreen;drawScreen(IIF)V"))
-    private void onyx$screenDraw(GuiScreen screen, int mouseX, int mouseY, float partialTicks) {
-        if (screen != null && screen.getClass().getName().startsWith("xyz.daikirai.")) {
-            xyz.daikirai.gui.onyx.render.GuiFont.begin();
-            try {
-                screen.drawScreen(mouseX, mouseY, partialTicks);
-            } finally {
-                xyz.daikirai.gui.onyx.render.GuiFont.end();
-            }
-        } else {
-            screen.drawScreen(mouseX, mouseY, partialTicks);
-        }
+    /**
+     * One custom-font scope per rendered frame. {@code updateCameraAndRender} contains the RenderTick
+     * events (where the HUD modules draw), the world, the screen and the chat, so every vanilla
+     * {@code FontRenderer} call inside it - chat lines, tab-list header/footer, F3, tooltips - gets
+     * the ported font. Loading screens draw text outside this method and keep the bitmap font.
+     */
+    @Inject(method = "updateCameraAndRender", at = @At("HEAD"))
+    private void onyx$fontScopeBegin(float partialTicks, long nanoTime, CallbackInfo ci) {
+        xyz.daikirai.gui.onyx.render.GuiFont.begin();
+    }
+
+    @Inject(method = "updateCameraAndRender", at = @At("RETURN"))
+    private void onyx$fontScopeEnd(float partialTicks, long nanoTime, CallbackInfo ci) {
+        xyz.daikirai.gui.onyx.render.GuiFont.end();
     }
 
     @ModifyConstant(method = "hurtCameraEffect", constant = @Constant(floatValue = 14.0F))
     private float clickgui$hurtCam(float f) {
         return CameraModules.hurtCam();
+    }
+
+    /** Frame boundary for the smooth zoom: one camera setup per frame, and it keeps ticking after the module is released. */
+    @Inject(method = "setupCameraTransform", at = @At("HEAD"))
+    private void clickgui$zoomFrame(float partialTicks, int pass, CallbackInfo ci) {
+        ZoomModule.tickStatic();
     }
 
     @Inject(method = "getFOVModifier", at = @At("RETURN"), cancellable = true)

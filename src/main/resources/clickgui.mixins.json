@@ -23,9 +23,13 @@
     "MixinRenderPlayer",
     "MixinGuiIngame",
     "MixinGuiIngameForge",
+    "MixinGuiMainMenu",
+    "MixinGuiOptions",
     "MixinGuiPlayerTabOverlay",
+    "MixinGuiScreen",
     "MixinGuiConnecting",
     "MixinGuiDownloadTerrain",
+    "MixinInventoryEffectRenderer",
     "MixinGuiNewChat"
   ]
 }

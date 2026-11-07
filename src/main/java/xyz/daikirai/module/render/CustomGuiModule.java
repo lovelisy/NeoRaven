@@ -11,6 +11,7 @@ import xyz.daikirai.gui.onyx.OnyxClickGuiModule;
 import xyz.daikirai.gui.onyx.hud.Hotbar;
 import xyz.daikirai.gui.onyx.hud.Scoreboard;
 import xyz.daikirai.gui.onyx.render.GuiFont;
+import xyz.daikirai.gui.onyx.render.GuiOpenAnimation;
 import xyz.daikirai.module.Category;
 import xyz.daikirai.module.Module;
 import xyz.daikirai.module.ModuleManager;
@@ -39,6 +40,12 @@ public final class CustomGuiModule extends Module {
     private static SliderSetting fontSpacing;
     private static ButtonSetting fontShadow;
 
+    private static ButtonSetting openAnimation;
+    private static SliderSetting openDuration;
+    private static SliderSetting openScale;
+    private static ButtonSetting openFade;
+    private static ButtonSetting centeredContainers;
+
     private static ButtonSetting hotbar;
     private static SliderSetting hotbarScale;
     private static ButtonSetting hotbarFrostedGlass;
@@ -64,6 +71,12 @@ public final class CustomGuiModule extends Module {
         fontSize = slider("Font: Size");
         fontSpacing = slider("Font: Letter spacing");
         fontShadow = button("Font: Shadow");
+
+        openAnimation = button("Open animation");
+        openDuration = slider("Open animation: Duration");
+        openScale = slider("Open animation: Scale from");
+        openFade = button("Open animation: Fade");
+        centeredContainers = button("Open animation: Centered containers");
 
         hotbar = button("Hotbar");
         hotbarScale = slider("Hotbar: Scale");
@@ -206,6 +219,8 @@ public final class CustomGuiModule extends Module {
             HOTBAR.reset();
         } else if (button == font) {
             GuiFont.reset();
+        } else if (button == openAnimation && !openAnimation.isToggled()) {
+            GuiOpenAnimation.reset();
         }
     }
 
@@ -214,6 +229,11 @@ public final class CustomGuiModule extends Module {
         HUD.reset();
         HOTBAR.reset();
         GuiFont.reset();
+    }
+
+    @Override
+    public void onDisable() {
+        GuiOpenAnimation.reset();
     }
 
     public static Scoreboard scoreboardHud() {
@@ -263,5 +283,25 @@ public final class CustomGuiModule extends Module {
 
     public static boolean fontShadow() {
         return fontShadow == null || fontShadow.isToggled();
+    }
+
+    public static boolean animatesScreens() {
+        return instance != null && instance.isEnabled() && openAnimation != null && openAnimation.isToggled();
+    }
+
+    public static float openDuration() {
+        return openDuration == null ? 300.0F : (float) openDuration.getInput();
+    }
+
+    public static float openScale() {
+        return openScale == null ? 0.92F : (float) openScale.getInput();
+    }
+
+    public static boolean openFade() {
+        return openFade == null || openFade.isToggled();
+    }
+
+    public static boolean centeredContainers() {
+        return animatesScreens() && centeredContainers != null && centeredContainers.isToggled();
     }
 }

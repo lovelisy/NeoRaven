@@ -16,9 +16,6 @@ import xyz.daikirai.module.ModuleManager;
 import xyz.daikirai.util.Zoom;
 import xyz.daikirai.util.RotationManager;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiIngameMenu;
-import net.minecraft.client.gui.GuiMainMenu;
-import net.minecraft.client.gui.GuiScreen;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
@@ -36,6 +33,8 @@ public class ClickGuiMod {
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent e) {
+        xyz.daikirai.client.FirstRun.capture();
+        MinecraftForge.EVENT_BUS.register(new xyz.daikirai.client.FirstRun());
         ModuleManager.init();
         xyz.daikirai.script.ScriptReflection.init();
         xyz.daikirai.script.ScriptEvents.bind(xyz.daikirai.script.ScriptDelegated.class);
@@ -59,15 +58,9 @@ public class ClickGuiMod {
         if (mc.currentScreen instanceof xyz.daikirai.music.MusicScreen && event.gui == null) {
             ((xyz.daikirai.music.MusicScreen) mc.currentScreen).deferClose();
         }
-        GuiScreen requested = event.gui;
-        if (requested == null) {
-            return;
-        }
-        if (requested.getClass() == GuiIngameMenu.class && mc.theWorld == null) {
-            event.gui = new GuiMainMenu();
-        } else if (mc.theWorld != null && requested instanceof GuiMainMenu) {
-            event.gui = new GuiIngameMenu();
-        }
+        event.gui = xyz.daikirai.gui.onyx.menu.MenuStyle.wrap(event.gui);
+        event.gui = xyz.daikirai.gui.onyx.menu.SettingsStyle.wrap(event.gui);
+        event.gui = xyz.daikirai.gui.onyx.menu.AndroidScreens.wrap(event.gui);
     }
 
     private static boolean firstTick = true;
