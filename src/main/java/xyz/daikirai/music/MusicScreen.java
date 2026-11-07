@@ -137,6 +137,7 @@ public final class MusicScreen extends GuiScreen {
     private boolean searchFocused;
     private long searchTypedAt;
     private long caretAt;
+    private int searchCaret;
 
     private boolean draggingProgress;
     private float progressPreview = -1.0F;
@@ -250,6 +251,27 @@ public final class MusicScreen extends GuiScreen {
         } else if (scroll.value() != 0.0F) {
             scroll.set(0.0F);
         }
+    }
+
+    private void insertSearch(String value) {
+        String merged = searchText.substring(0, searchCaret) + value + searchText.substring(searchCaret);
+        if (merged.length() > 48) {
+            merged = merged.substring(0, 48);
+        }
+        searchText = merged;
+        searchCaret = Math.min(merged.length(), searchCaret + value.length());
+    }
+
+    private int searchStart(float maxText) {
+        float limit = Math.max(2.0F, maxText - 2.0F);
+        if (searchCaret <= 0) {
+            return 0;
+        }
+        int start = 0;
+        while (start < searchCaret && SEARCH.width(searchText.substring(start, searchCaret)) > limit) {
+            start++;
+        }
+        return start;
     }
 
     private void tickSearch() {
@@ -556,10 +578,13 @@ public final class MusicScreen extends GuiScreen {
             String displayed = searchText.isEmpty() ? "搜索歌曲、歌手" : searchText;
             int textColor = searchText.isEmpty()
                     ? Material.withAlpha(current.onSurfaceVariant, 0.75F) : current.onSurface;
-            ui.text(SEARCH, ui.truncate(SEARCH, displayed, searchW - 52.0F), searchX + 38.0F,
-                    searchY + 20.0F, textColor, UI.ALIGN_LEFT);
+            float textStart = searchX + 38.0F;
+            float maxText = searchW - 52.0F;
+            int start = searchStart(maxText);
+            String visible = searchText.isEmpty() ? displayed : ui.truncate(SEARCH, searchText.substring(start), maxText);
+            ui.text(SEARCH, visible, textStart, searchY + 20.0F, textColor, UI.ALIGN_LEFT);
             if (focused && (System.currentTimeMillis() / 530L) % 2L == 0L) {
-                float caretX = searchX + 38.0F + SEARCH.width(searchText) + 1.0F;
+                float caretX = textStart + SEARCH.width(searchText.substring(start, searchCaret)) + 1.0F;
                 ui.rect(caretX, searchY + 12.0F, 1.6F, 16.0F, current.primary);
             }
             hits.add(new Hit(searchX, searchY, searchW, 40.0F, new Runnable() {
@@ -1358,8 +1383,26 @@ public final class MusicScreen extends GuiScreen {
                 draggingSlider = (SliderHit) hit;
                 draggingSlider.apply(mouseX);
             } else {
-                searchFocused = mouseX >= searchRectX && mouseX < searchRectX + searchRectW
+                boolean wasSearch = mouseX >= searchRectX && mouseX < searchRectX + searchRectW
                         && mouseY >= searchRectY && mouseY < searchRectY + searchRectH;
+                searchFocused = wasSearch;
+                if (wasSearch) {
+                    float maxText = searchRectW - 52.0F;
+                    float target = mouseX - (searchRectX + 38.0F);
+                    int start = searchStart(maxText);
+                    int best = start;
+                    float bestDelta = Float.MAX_VALUE;
+                    for (int c = start; c <= searchText.length(); c++) {
+                        float w = SEARCH.width(searchText.substring(start, c));
+                        float delta = Math.abs(w - target);
+                        if (delta < bestDelta) {
+                            bestDelta = delta;
+                            best = c;
+                        }
+                    }
+                    searchCaret = best;
+                    caretAt = System.currentTimeMillis();
+                }
                 if (hit.action != null) {
                     hit.action.run();
                 }
@@ -1472,10 +1515,38 @@ public final class MusicScreen extends GuiScreen {
         if (!interactive()) return;
         if (searchFocused) {
             if (key == 14) {
-                if (!searchText.isEmpty()) {
-                    searchText = searchText.substring(0, searchText.length() - 1);
+                if (searchCaret > 0) {
+                    searchText = searchText.substring(0, searchCaret - 1) + searchText.substring(searchCaret);
+                    searchCaret--;
                     searchTypedAt = System.currentTimeMillis();
                 }
+                return;
+            }
+            if (key == 211) {
+                if (searchCaret < searchText.length()) {
+                    searchText = searchText.substring(0, searchCaret) + searchText.substring(searchCaret + 1);
+                    searchTypedAt = System.currentTimeMillis();
+                }
+                return;
+            }
+            if (key == 203) {
+                if (searchCaret > 0) {
+                    searchCaret--;
+                }
+                return;
+            }
+            if (key == 205) {
+                if (searchCaret < searchText.length()) {
+                    searchCaret++;
+                }
+                return;
+            }
+            if (key == 199) {
+                searchCaret = 0;
+                return;
+            }
+            if (key == 207) {
+                searchCaret = searchText.length();
                 return;
             }
             if (key == 28) {
@@ -1486,14 +1557,14 @@ public final class MusicScreen extends GuiScreen {
             if (key == 47 && GuiScreen.isCtrlKeyDown()) {
                 String clipboard = GuiScreen.getClipboardString();
                 if (clipboard != null) {
-                    searchText += clipboard.replace('\n', ' ');
+                    insertSearch(clipboard.replace('\n', ' '));
                     searchTypedAt = System.currentTimeMillis();
                 }
                 return;
             }
             if (typed >= 32 && typed != 127) {
                 if (searchText.length() < 48) {
-                    searchText += typed;
+                    insertSearch(String.valueOf(typed));
                     searchTypedAt = System.currentTimeMillis();
                     page = Page.SEARCH;
                 }
