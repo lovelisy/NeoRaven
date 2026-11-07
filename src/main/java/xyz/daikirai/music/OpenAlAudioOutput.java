@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.openal.AL10;
-import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCcontext;
 
 public final class OpenAlAudioOutput implements AudioOutput {
@@ -12,6 +11,7 @@ public final class OpenAlAudioOutput implements AudioOutput {
     private static final int BUFFERS = 5;
 
     private final ALCcontext context;
+    private final boolean contextUnknown;
     private final int sampleRate;
     private final int format;
     private final int frameBytes;
@@ -27,8 +27,9 @@ public final class OpenAlAudioOutput implements AudioOutput {
     private volatile boolean running = true;
     private volatile boolean closed = false;
 
-    private OpenAlAudioOutput(ALCcontext context, int sampleRate, int channels) {
+    private OpenAlAudioOutput(ALCcontext context, boolean contextUnknown, int sampleRate, int channels) {
         this.context = context;
+        this.contextUnknown = contextUnknown;
         this.sampleRate = sampleRate;
         this.format = channels >= 2 ? AL10.AL_FORMAT_STEREO16 : AL10.AL_FORMAT_MONO16;
         this.frameBytes = 2 * (channels >= 2 ? 2 : 1);
@@ -56,17 +57,13 @@ public final class OpenAlAudioOutput implements AudioOutput {
         if (sampleRate <= 0 || channels <= 0) {
             return null;
         }
-        ALCcontext current;
-        try {
-            current = ALC10.alcGetCurrentContext();
-        } catch (Throwable t) {
-            return null;
-        }
-        if (current == null || !current.isValid()) {
+        ALCcontext current = OpenAlContext.current();
+        boolean unknown = OpenAlContext.unknown();
+        if (!unknown && (current == null || !current.isValid())) {
             return null;
         }
         AL10.alGetError();
-        OpenAlAudioOutput out = new OpenAlAudioOutput(current, sampleRate, channels);
+        OpenAlAudioOutput out = new OpenAlAudioOutput(current, unknown, sampleRate, channels);
         try {
             out.source = AL10.alGenSources();
             if (AL10.alGetError() != AL10.AL_NO_ERROR) {
@@ -89,12 +86,7 @@ public final class OpenAlAudioOutput implements AudioOutput {
     }
 
     private boolean contextAlive() {
-        try {
-            ALCcontext now = ALC10.alcGetCurrentContext();
-            return now != null && now.isValid() && now.equals(context);
-        } catch (Throwable t) {
-            return false;
-        }
+        return OpenAlContext.matches(context, contextUnknown);
     }
 
     private boolean alive() {
@@ -141,11 +133,11 @@ public final class OpenAlAudioOutput implements AudioOutput {
             }
             requireAlive();
             pending.flip();
-            long frames = pending.remaining() / frameBytes;
+            int frames = pending.remaining() / frameBytes;
             AL10.alBufferData(buffer, format, pending, sampleRate);
             pending.clear();
             AL10.alSourceQueueBuffers(source, buffer);
-            queuedFrames.addLast(frames);
+            queuedFrames.addLast((long) frames);
             if (running && AL10.alGetSourcei(source, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING) {
                 AL10.alSourcePlay(source);
             }

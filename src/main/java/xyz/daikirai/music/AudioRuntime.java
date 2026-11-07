@@ -10,6 +10,7 @@ public final class AudioRuntime {
 
     private static final boolean ANDROID = detectAndroid();
     private static final boolean NATIVE_JAVA_SOUND = detectNativeJavaSound();
+    private static final boolean FORCE_OPENAL = Boolean.getBoolean("neoraven.openal");
 
     public static boolean isAndroid() {
         return ANDROID;
@@ -20,32 +21,59 @@ public final class AudioRuntime {
     }
 
     public static boolean preferGameAudio() {
-        return ANDROID || !NATIVE_JAVA_SOUND;
+        return FORCE_OPENAL || ANDROID || !NATIVE_JAVA_SOUND;
     }
 
-    private static boolean detectAndroid() {
-        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        if (os.contains("android")) {
-            return true;
+    public static String autoReason() {
+        if (preferGameAudio()) {
+            if (FORCE_OPENAL) {
+                return "已指定游戏 OpenAL";
+            }
+            if (ANDROID) {
+                return "安卓环境，将用游戏 OpenAL";
+            }
+            return "未检测到 Java Sound，将用游戏 OpenAL";
         }
-        String runtime = (System.getProperty("java.runtime.name", "") + " "
-                + System.getProperty("java.vm.name", "")).toLowerCase(Locale.ROOT);
-        if (runtime.contains("android") || runtime.contains("dalvik")) {
+        return "桌面环境，将用 Java Sound";
+    }
+
+    public static boolean isAndroid(String osName, String runtimeName, String vmName,
+                                    String androidRoot, String androidData, String pojavNativeDir,
+                                    boolean androidSystem) {
+        String os = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
+        if (os.contains("android")) {
             return true;
         }
         if (!os.contains("linux")) {
             return false;
         }
-        if ("/system".equals(System.getenv("ANDROID_ROOT"))
-                && "/data".equals(System.getenv("ANDROID_DATA"))) {
-            return true;
+        String runtime = ((runtimeName == null ? "" : runtimeName) + " "
+                + (vmName == null ? "" : vmName)).toLowerCase(Locale.ROOT);
+        return runtime.contains("android") || runtime.contains("dalvik")
+                || androidSystem
+                || ("/system".equals(androidRoot) && "/data".equals(androidData))
+                || (pojavNativeDir != null && !pojavNativeDir.trim().isEmpty());
+    }
+
+    private static boolean detectAndroid() {
+        try {
+            return isAndroid(
+                    System.getProperty("os.name", ""),
+                    System.getProperty("java.runtime.name", ""),
+                    System.getProperty("java.vm.name", ""),
+                    System.getenv("ANDROID_ROOT"),
+                    System.getenv("ANDROID_DATA"),
+                    System.getenv("POJAV_NATIVEDIR"),
+                    hasAndroidSystemFiles());
+        } catch (SecurityException ignored) {
+            return false;
         }
-        String pojav = System.getenv("POJAV_NATIVEDIR");
-        if (pojav != null && !pojav.trim().isEmpty()) {
-            return true;
-        }
+    }
+
+    private static boolean hasAndroidSystemFiles() {
         return new File("/system/build.prop").isFile()
-                || new File("/system/bin/app_process").isFile();
+                || new File("/system/bin/app_process").isFile()
+                || new File("/system/bin/app_process64").isFile();
     }
 
     private static boolean detectNativeJavaSound() {

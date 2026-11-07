@@ -854,7 +854,7 @@ public final class MusicScreen extends GuiScreen {
         y += 56.0F;
         String active = m.activeOutput();
         String outputLabel = active.isEmpty()
-                ? (AudioRuntime.preferGameAudio() ? "自动（安卓环境，将用游戏 OpenAL）" : "自动（桌面环境，将用 Java Sound）")
+                ? ("自动（" + AudioRuntime.autoReason() + "）")
                 : ("当前：" + active);
         ui.text(MusicTypeface.CAPTION, "音频输出：" + outputLabel,
                 CT_X + 8.0F, y + 10.0F, Material.withAlpha(current.onSurfaceVariant, 0.7F), UI.ALIGN_LEFT);
