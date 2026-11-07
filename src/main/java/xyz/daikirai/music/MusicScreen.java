@@ -842,7 +842,7 @@ public final class MusicScreen extends GuiScreen {
         ui.text(MusicTypeface.BODY, logged ? "已登录：" + m.profile().nickname : "未登录，仅能播放试听/免费曲目",
                 CT_X + 156.0F, y + 25.0F, current.onSurfaceVariant, UI.ALIGN_LEFT);
         y += 56.0F;
-        ui.text(MusicTypeface.CAPTION, "音频输出：Java Sound（独立于游戏 OpenAL 混音）",
+        ui.text(MusicTypeface.CAPTION, "音频输出：游戏 OpenAL（与游戏声音共用混音）",
                 CT_X + 8.0F, y + 10.0F, Material.withAlpha(current.onSurfaceVariant, 0.7F), UI.ALIGN_LEFT);
         return y + 28.0F;
     }

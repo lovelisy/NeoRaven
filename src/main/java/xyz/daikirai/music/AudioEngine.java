@@ -6,38 +6,17 @@ import javazoom.jl.decoder.Header;
 import javazoom.jl.decoder.Obuffer;
 import javazoom.jl.decoder.SampleBuffer;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.SourceDataLine;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
-/**
- * MP3 playback for the music player.
- *
- * <p>Melodify ran its own LWJGL3 OpenAL device on a private thread. Minecraft 1.8.9 already owns
- * an OpenAL context through LWJGL2, and making a second one current from another thread would
- * fight with the game's sound engine (either the game's sounds or the music would go silent,
- * depending on which thread called {@code alcMakeContextCurrent} last). So the port keeps the
- * same architecture — one private audio thread, streamed chunks, JLayer decoding — but writes the
- * PCM to a {@link SourceDataLine} instead: a separate Java Sound output that coexists with the
- * game's own mixer.</p>
- *
- * <p>The engine only ever plays a local file; downloading (and resolving the signed NetEase URL)
- * belongs to {@link MusicManager}, so a playlist change never blocks the audio thread.</p>
- */
 public final class AudioEngine {
 
     /** Notified when a track reaches its end without being stopped or replaced. */
     public interface Listener {
         void onTrackEnded();
     }
-
-    private static final int LINE_BUFFER_FRAMES = 8192;
 
     private final Object lock = new Object();
 
@@ -56,7 +35,7 @@ public final class AudioEngine {
     private volatile Listener listener;
 
     private Thread thread;
-    private volatile SourceDataLine line;
+    private volatile AudioOutput line;
     private volatile long trackSerial;
 
     public void setListener(Listener value) {
@@ -226,7 +205,7 @@ public final class AudioEngine {
         this.peak = 0.0F;
 
         Bitstream stream = null;
-        SourceDataLine output = null;
+        AudioOutput output = null;
         try {
             stream = new Bitstream(new BufferedInputStream(new FileInputStream(target), 256 * 1024));
             Header header = stream.readFrame();
@@ -255,11 +234,10 @@ public final class AudioEngine {
                 }
             }
 
-            AudioFormat format = new AudioFormat(frequency, 16, channels, true, false);
-            DataLine.Info info = new DataLine.Info(SourceDataLine.class, format);
-            output = (SourceDataLine) AudioSystem.getLine(info);
-            output.open(format, LINE_BUFFER_FRAMES * channels * 2);
-            output.start();
+            output = openOutput(frequency, channels);
+            if (output == null) {
+                throw new IOException("no audio output available");
+            }
             this.line = output;
             this.buffering = false;
             this.positionMs = baseMs;
@@ -335,6 +313,9 @@ public final class AudioEngine {
                 int frames = Math.max(0, interleaved / Math.max(1, channels));
                 int bytes = toPcm16(buffer.getBuffer(), interleaved, channels, this.gain, pcm);
                 if (bytes > 0) {
+                    if (output.isLost()) {
+                        throw new IOException("game audio restarted");
+                    }
                     output.write(pcm, 0, bytes);
                 }
                 playedFrames += frames;
@@ -371,6 +352,14 @@ public final class AudioEngine {
                 }
             }
         }
+    }
+
+    private static AudioOutput openOutput(int frequency, int channels) {
+        OpenAlAudioOutput openal = OpenAlAudioOutput.open(frequency, channels);
+        if (openal != null) {
+            return openal;
+        }
+        return JavaSoundAudioOutput.open(frequency, channels);
     }
 
     private static SampleBuffer decode(Decoder decoder, Header header, Bitstream stream) throws Exception {
@@ -449,20 +438,14 @@ public final class AudioEngine {
     }
 
     private void closeLine() {
-        SourceDataLine current = this.line;
+        AudioOutput current = this.line;
         this.line = null;
         close(current);
     }
 
-    private static void close(SourceDataLine output) {
-        if (output == null) {
-            return;
-        }
-        try {
-            output.stop();
-            output.flush();
+    private static void close(AudioOutput output) {
+        if (output != null) {
             output.close();
-        } catch (Throwable ignored) {
         }
     }
 
