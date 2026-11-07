@@ -141,6 +141,7 @@ public final class MusicScreen extends GuiScreen {
     private boolean draggingProgress;
     private float progressPreview = -1.0F;
     private boolean draggingVolume;
+    private boolean volumeOpen;
     private SliderHit draggingSlider;
     private float searchRectX;
     private float searchRectY;
@@ -428,6 +429,7 @@ public final class MusicScreen extends GuiScreen {
         closeCommitted = true;
         restoreIsland();
         draggingProgress = draggingVolume = false;
+        volumeOpen = false;
         draggingSlider = null;
         return false;
     }
@@ -1090,15 +1092,24 @@ public final class MusicScreen extends GuiScreen {
                 manager.toggleShuffle();
             }
         }));
-        float volStartX = px + pw - 150.0F;
-        float volW = 120.0F;
-        ui.icon(manager.volume() <= 0.001F ? I_VOLUME_OFF : I_VOLUME, volStartX - 18.0F, buttonY, 19.0F,
-                Material.withAlpha(current.onSurfaceVariant, 0.9F));
-        ui.rounded(volStartX, buttonY - 2.0F, volW, 4.0F, 2.0F, current.surfaceContainerHighest);
-        ui.rounded(volStartX, buttonY - 2.0F, Math.max(4.0F, volW * manager.volume()), 4.0F, 2.0F,
-                current.primary);
-        ui.circle(volStartX + volW * manager.volume(), buttonY, 6.0F, current.primary);
-        hits.add(new VolumeHit(volStartX, buttonY - 14.0F, volW, 28.0F, volStartX));
+        float speakerX = rightX - 42.0F;
+        if (volumeOpen) {
+            float volW = 92.0F;
+            float volStartX = speakerX - 20.0F - volW;
+            ui.rounded(volStartX, buttonY - 2.0F, volW, 4.0F, 2.0F, current.surfaceContainerHighest);
+            ui.rounded(volStartX, buttonY - 2.0F, Math.max(4.0F, volW * manager.volume()), 4.0F, 2.0F,
+                    current.primary);
+            ui.circle(volStartX + volW * manager.volume(), buttonY, 6.0F, current.primary);
+            hits.add(new VolumeHit(volStartX, buttonY - 14.0F, volW, 28.0F, volStartX, volW));
+        }
+        ui.icon(manager.volume() <= 0.001F ? I_VOLUME_OFF : I_VOLUME, speakerX, buttonY, 19.0F,
+                volumeOpen ? current.primary : Material.withAlpha(current.onSurfaceVariant, 0.9F));
+        hits.add(new Hit(speakerX - 16.0F, buttonY - 16.0F, 32.0F, 32.0F, new Runnable() {
+            @Override
+            public void run() {
+                volumeOpen = !volumeOpen;
+            }
+        }));
 
         if (manager.isLoadingTrack() || manager.engine().isBuffering()) {
             ui.text(MusicTypeface.CAPTION, manager.isLoadingTrack() ? "缓冲中…" : "解码中…",
@@ -1359,6 +1370,7 @@ public final class MusicScreen extends GuiScreen {
         if (lyricOpen && lyricPanel.mouseClicked(mouseX, mouseY)) {
             return;
         }
+        volumeOpen = false;
         searchFocused = false;
     }
 
@@ -1556,14 +1568,16 @@ public final class MusicScreen extends GuiScreen {
 
     private static final class VolumeHit extends Hit {
         private final float startX;
+        private final float span;
 
-        VolumeHit(float x, float y, float w, float h, float startX) {
+        VolumeHit(float x, float y, float w, float h, float startX, float span) {
             super(x, y, w, h, null);
             this.startX = startX;
+            this.span = span <= 0.0F ? 1.0F : span;
         }
 
         float fraction(float mouseX) {
-            return Material.clamp((mouseX - startX) / 120.0F, 0.0F, 1.0F);
+            return Material.clamp((mouseX - startX) / span, 0.0F, 1.0F);
         }
     }
 
