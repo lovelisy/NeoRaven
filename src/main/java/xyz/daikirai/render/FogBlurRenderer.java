@@ -23,9 +23,10 @@ public final class FogBlurRenderer {
 
     private final Minecraft mc = Minecraft.getMinecraft();
     private Shader down, up, composite;
-    private int half = -1, quarter = -1, depth = -1, halfFbo = -1, quarterFbo = -1, depthFbo = -1;
+    private int half = -1, quarter = -1, depth = -1, depthColor = -1, halfFbo = -1, quarterFbo = -1, depthFbo = -1;
     private int width, height;
     private boolean failed;
+    private boolean blitChecked;
 
     public void reset() { failed = false; }
 
@@ -33,9 +34,10 @@ public final class FogBlurRenderer {
         if (halfFbo != -1) OpenGlHelper.glDeleteFramebuffers(halfFbo);
         if (quarterFbo != -1) OpenGlHelper.glDeleteFramebuffers(quarterFbo);
         if (depthFbo != -1) OpenGlHelper.glDeleteFramebuffers(depthFbo);
-        for (int texture : new int[]{half, quarter, depth}) if (texture != -1) GL11.glDeleteTextures(texture);
-        half = quarter = depth = halfFbo = quarterFbo = depthFbo = -1;
+        for (int texture : new int[]{half, quarter, depth, depthColor}) if (texture != -1) GL11.glDeleteTextures(texture);
+        half = quarter = depth = depthColor = halfFbo = quarterFbo = depthFbo = -1;
         width = height = 0;
+        blitChecked = false;
     }
 
     public void render(FogBlurModule settings) {
@@ -131,6 +133,7 @@ public final class FogBlurRenderer {
 
     private void copyDepth(Framebuffer scene) {
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        if (!blitChecked) for (int i = 0; i < 8 && GL11.glGetError() != 0; i++) { }
         ContextCapabilities capabilities = GLContext.getCapabilities();
         if (capabilities.OpenGL30) {
             GL30.glBindFramebuffer(READ_FRAMEBUFFER, scene.framebufferObject);
@@ -154,6 +157,11 @@ public final class FogBlurRenderer {
             EXTFramebufferObject.glBindFramebufferEXT(READ_FRAMEBUFFER, 0);
             EXTFramebufferObject.glBindFramebufferEXT(DRAW_FRAMEBUFFER, 0);
         }
+        if (!blitChecked) {
+            blitChecked = true;
+            int error = GL11.glGetError();
+            if (error != 0) System.err.println("[onyx] Fog Blur depth blit failed: 0x" + Integer.toHexString(error));
+        }
     }
 
     private void ensure(int w, int h) {
@@ -162,20 +170,21 @@ public final class FogBlurRenderer {
         half = texture(Math.max(1, w / 2), Math.max(1, h / 2), false);
         quarter = texture(Math.max(1, w / 4), Math.max(1, h / 4), false);
         depth = texture(w, h, true);
+        depthColor = texture(w, h, false);
         halfFbo = framebuffer(half);
         quarterFbo = framebuffer(quarter);
-        depthFbo = depthFramebuffer(depth);
+        depthFbo = depthFramebuffer(depth, depthColor);
         width = w;
         height = h;
     }
 
-    private static int depthFramebuffer(int texture) {
+    private static int depthFramebuffer(int texture, int colorTexture) {
         int fbo = OpenGlHelper.glGenFramebuffers();
         OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, fbo);
+        OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_COLOR_ATTACHMENT0,
+                GL11.GL_TEXTURE_2D, colorTexture, 0);
         OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, DEPTH_ATTACHMENT,
                 GL11.GL_TEXTURE_2D, texture, 0);
-        GL11.glDrawBuffer(GL11.GL_NONE);
-        GL11.glReadBuffer(GL11.GL_NONE);
         if (OpenGlHelper.glCheckFramebufferStatus(OpenGlHelper.GL_FRAMEBUFFER) != OpenGlHelper.GL_FRAMEBUFFER_COMPLETE) {
             OpenGlHelper.glDeleteFramebuffers(fbo);
             throw new IllegalStateException("Incomplete fog depth framebuffer");
@@ -189,7 +198,7 @@ public final class FogBlurRenderer {
     private static int texture(int width, int height, boolean depth) {
         int texture = GL11.glGenTextures();
         bind(0, texture);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, depth ? GL11.GL_DEPTH_COMPONENT : 32856, width, height, 0,
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, depth ? 33190 : 32856, width, height, 0,
                 depth ? GL11.GL_DEPTH_COMPONENT : GL11.GL_RGBA,
                 depth ? GL11.GL_UNSIGNED_INT : GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, depth ? GL11.GL_NEAREST : GL11.GL_LINEAR);
