@@ -37,6 +37,21 @@ public final class Typeface {
         return font != null ? font : TtfFont.load(TEXT_PATH, size);
     }
 
+    /** User scale for every Material style, driven by the CustomGui font settings. */
+    public static float zoom() {
+        return xyz.daikirai.module.render.CustomGuiModule.interfaceFontSize();
+    }
+
+    /** Extra advance per glyph, in the style's own pixel space. */
+    public static float spacing() {
+        return xyz.daikirai.module.render.CustomGuiModule.interfaceFontSpacing();
+    }
+
+    /** Whether Onyx's Material text draws the 1px offset shadow. */
+    public static boolean shadow() {
+        return xyz.daikirai.module.render.CustomGuiModule.interfaceFontShadow();
+    }
+
     /** Wallpaper clock: 24pt regular blown up to 42px (the atlas rasters at 96px, so it stays sharp). */
     public static final Style DISPLAY = new Style(24.0F, 42.0F, 48.0F, false);
     /** Android greeting: 24pt regular at 22px. */
@@ -82,6 +97,11 @@ public final class Typeface {
         return new Style(font, size, lineHeight);
     }
 
+    /** {@link #fromFont} exempt from the interface font scale. */
+    public static Style fixedFromFont(TtfFont font, float size, float lineHeight) {
+        return new Style(0.0F, size, lineHeight, false, font, null, true);
+    }
+
     /**
      * A style with a secondary face for glyphs the primary one cannot draw.
      *
@@ -90,6 +110,16 @@ public final class Typeface {
      */
     public static Style mixed(float optical, float size, float lineHeight, boolean medium, TtfFont secondary) {
         return new Style(optical, size, lineHeight, medium, null, secondary);
+    }
+
+    /** A style exempt from the interface font scale (fixed-layout screens with their own size control). */
+    public static Style fixed(float optical, float size, float lineHeight, boolean medium) {
+        return new Style(optical, size, lineHeight, medium, null, null, true);
+    }
+
+    /** {@link #fixed} with a secondary face. */
+    public static Style fixedMixed(float optical, float size, float lineHeight, boolean medium, TtfFont secondary) {
+        return new Style(optical, size, lineHeight, medium, null, secondary, true);
     }
 
     /**
@@ -186,6 +216,10 @@ public final class Typeface {
     private Typeface() {
     }
 
+    private static int darken(int color) {
+        return (color & 0xFF000000) | ((color & 0xFCFCFC) >> 2);
+    }
+
     private static TtfFont font(boolean medium, float optical) {
         return optical > 16.0F ? text24() : text9();
     }
@@ -198,27 +232,34 @@ public final class Typeface {
         private final boolean medium;
         private final TtfFont explicit;
         private final TtfFont secondary;
+        private final boolean fixed;
 
         private Style(float optical, float size, float lineHeight, boolean medium) {
-            this(optical, size, lineHeight, medium, null, null);
+            this(optical, size, lineHeight, medium, null, null, false);
         }
 
         private Style(TtfFont explicit, float size, float lineHeight) {
-            this(0.0F, size, lineHeight, false, explicit, null);
+            this(0.0F, size, lineHeight, false, explicit, null, true);
         }
 
         private Style(float optical, float size, float lineHeight, boolean medium, TtfFont explicit) {
-            this(optical, size, lineHeight, medium, explicit, null);
+            this(optical, size, lineHeight, medium, explicit, null, false);
         }
 
         private Style(float optical, float size, float lineHeight, boolean medium, TtfFont explicit,
                       TtfFont secondary) {
+            this(optical, size, lineHeight, medium, explicit, secondary, false);
+        }
+
+        private Style(float optical, float size, float lineHeight, boolean medium, TtfFont explicit,
+                      TtfFont secondary, boolean fixed) {
             this.optical = optical;
             this.size = size;
             this.lineHeight = lineHeight;
             this.medium = medium;
             this.explicit = explicit;
             this.secondary = secondary;
+            this.fixed = fixed;
         }
 
         public TtfFont font() {
@@ -238,7 +279,7 @@ public final class Typeface {
 
         /** Matrix scale from the rasterised optical size to the requested pixel size. */
         public float scale() {
-            return size / font().size();
+            return size * (fixed ? 1.0F : Typeface.zoom()) / font().size();
         }
 
         public float width(String text) {
@@ -257,7 +298,8 @@ public final class Typeface {
                 total += run.width(text.substring(i, j)) * (primary.size() / run.size());
                 i = j;
             }
-            return total * scale();
+            float extra = text.length() > 1 ? Typeface.spacing() * (text.length() - 1) : 0.0F;
+            return Math.max(0.0F, total * scale() + extra);
         }
 
         /**
@@ -269,6 +311,11 @@ public final class Typeface {
             TtfFont primary = font();
             float x = 0.0F;
             int i = 0;
+            float extra = Typeface.spacing();
+            boolean shadow = Typeface.shadow();
+            int shadowColor = shadow ? darken(color) : 0;
+            float inverse = extra == 0.0F ? 0.0F : extra / Math.max(0.0001F, scale());
+            float shadowShift = 1.0F / Math.max(0.0001F, scale());
             while (i < text.length()) {
                 TtfFont run = run(primary, text.charAt(i));
                 int j = i;
@@ -282,9 +329,16 @@ public final class Typeface {
                 if (relative != 1.0F) {
                     net.minecraft.client.renderer.GlStateManager.scale(relative, relative, 1.0F);
                 }
+                if (shadow) {
+                    net.minecraft.client.renderer.GlStateManager.pushMatrix();
+                    net.minecraft.client.renderer.GlStateManager.translate(shadowShift, shadowShift, 0.0F);
+                    run.draw(part, shadowColor);
+                    net.minecraft.client.renderer.GlStateManager.popMatrix();
+                }
                 run.draw(part, color);
                 net.minecraft.client.renderer.GlStateManager.popMatrix();
-                x += run.width(part) * relative;
+                x += run.width(part) * relative
+                        + inverse * Math.max(0, part.length() - (j == text.length() ? 1 : 0));
                 i = j;
             }
         }

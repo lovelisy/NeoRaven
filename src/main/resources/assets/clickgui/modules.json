@@ -9412,7 +9412,7 @@
       {
         "t": "toggle",
         "name": "Font: Shadow",
-        "value": true
+        "value": false
       },
       {
         "t": "toggle",

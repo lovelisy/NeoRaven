@@ -58,7 +58,7 @@ public final class MenuClock {
         }
         if (display == null) {
             display = digits == null ? Typeface.DISPLAY
-                    : Typeface.fromFont(digits, DIGITAL_SIZE, DIGITAL_SIZE * 1.12F);
+                    : Typeface.fixedFromFont(digits, DIGITAL_SIZE, DIGITAL_SIZE * 1.12F);
         }
         return display;
     }

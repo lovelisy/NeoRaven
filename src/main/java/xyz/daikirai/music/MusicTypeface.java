@@ -70,7 +70,7 @@ public final class MusicTypeface {
         if (usable) {
             return Typeface.fromFont(strong ? bold : regular, size, lineHeight);
         }
-        return Typeface.custom(size > 16.0F ? 24.0F : 9.0F, size, lineHeight, strong);
+        return Typeface.fixed(size > 16.0F ? 24.0F : 9.0F, size, lineHeight, strong);
     }
 
     /** MiSans with the player's 12pt raster as the secondary face (the compact card only). */
@@ -79,9 +79,9 @@ public final class MusicTypeface {
         // Same optical pick as the ClickGUI ramp: 24pt raster for 14px+ headings, 9pt below.
         float optical = size >= 13.0F ? 24.0F : 9.0F;
         if (usable) {
-            return Typeface.mixed(optical, size, lineHeight, strong, strong ? bold : regular);
+            return Typeface.fixedMixed(optical, size, lineHeight, strong, strong ? bold : regular);
         }
-        return Typeface.custom(optical, size, lineHeight, strong);
+        return Typeface.fixed(optical, size, lineHeight, strong);
     }
 
     public static synchronized void load() {
