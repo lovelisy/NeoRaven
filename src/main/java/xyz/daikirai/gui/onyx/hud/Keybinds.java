@@ -128,11 +128,14 @@ public final class Keybinds {
 
         float base = module.scale();
         float entrance = 0.94F + 0.06F * fade;
-        float scale = base * entrance;
         float layoutWidth = cardWidth.value();
         float layoutHeight = cardHeight.value();
-        this.w = layoutWidth * base;
-        this.h = layoutHeight * base;
+        float fit = Math.min(1.0F, Math.min(
+                resolution.getScaledWidth() * 0.62F / Math.max(1.0F, layoutWidth * base),
+                resolution.getScaledHeight() * 0.72F / Math.max(1.0F, layoutHeight * base)));
+        float scale = base * entrance * fit;
+        this.w = layoutWidth * base * fit;
+        this.h = layoutHeight * base * fit;
 
         float maxX = Math.max(0.0F, resolution.getScaledWidth() - w - EDGE);
         float maxY = Math.max(0.0F, resolution.getScaledHeight() - h - EDGE);

@@ -4,16 +4,26 @@ import java.nio.ByteBuffer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.shader.Framebuffer;
+import org.lwjgl.opengl.ARBFramebufferObject;
+import org.lwjgl.opengl.ContextCapabilities;
+import org.lwjgl.opengl.EXTFramebufferBlit;
+import org.lwjgl.opengl.EXTFramebufferObject;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GLContext;
 import xyz.daikirai.gui.onyx.material.Theme;
 import xyz.daikirai.gui.onyx.render.Shader;
 import xyz.daikirai.module.render.FogBlurModule;
 
 /** Onyx's half/quarter-resolution blur, composited using the scene's depth. */
 public final class FogBlurRenderer {
+    private static final int READ_FRAMEBUFFER = 0x8CA8;
+    private static final int DRAW_FRAMEBUFFER = 0x8CA9;
+    private static final int DEPTH_ATTACHMENT = 0x8D00;
+
     private final Minecraft mc = Minecraft.getMinecraft();
     private Shader down, up, composite;
-    private int half = -1, quarter = -1, depth = -1, halfFbo = -1, quarterFbo = -1;
+    private int half = -1, quarter = -1, depth = -1, halfFbo = -1, quarterFbo = -1, depthFbo = -1;
     private int width, height;
     private boolean failed;
 
@@ -22,17 +32,20 @@ public final class FogBlurRenderer {
     public void dispose() {
         if (halfFbo != -1) OpenGlHelper.glDeleteFramebuffers(halfFbo);
         if (quarterFbo != -1) OpenGlHelper.glDeleteFramebuffers(quarterFbo);
+        if (depthFbo != -1) OpenGlHelper.glDeleteFramebuffers(depthFbo);
         for (int texture : new int[]{half, quarter, depth}) if (texture != -1) GL11.glDeleteTextures(texture);
-        half = quarter = depth = halfFbo = quarterFbo = -1;
+        half = quarter = depth = halfFbo = quarterFbo = depthFbo = -1;
         width = height = 0;
     }
 
     public void render(FogBlurModule settings) {
         Framebuffer scene = mc.getFramebuffer();
         if (failed || !OpenGlHelper.shadersSupported || !OpenGlHelper.isFramebufferEnabled() || scene == null) return;
+        if (!blitSupported()) { failed = true; return; }
         int previousFbo = GL11.glGetInteger(0x8CA6);
         int matrix = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
         try (WorldRenderState state = new WorldRenderState(true)) {
+            int[] textures = saveTextures(3);
             GL11.glMatrixMode(GL11.GL_PROJECTION);
             GL11.glPushMatrix();
             try {
@@ -43,9 +56,7 @@ public final class FogBlurRenderer {
                 }
                 if (!down.valid() || !up.valid() || !composite.valid()) { failed = true; return; }
                 ensure(scene.framebufferWidth, scene.framebufferHeight);
-                OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, previousFbo);
-                bind(0, depth);
-                GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, 0, 0, width, height);
+                copyDepth(scene);
                 GL11.glLoadIdentity();
                 GL11.glOrtho(0, 1, 0, 1, -1, 1);
                 GL11.glMatrixMode(GL11.GL_MODELVIEW);
@@ -81,11 +92,67 @@ public final class FogBlurRenderer {
                 GL11.glMatrixMode(GL11.GL_PROJECTION);
                 GL11.glPopMatrix();
                 GL11.glMatrixMode(matrix);
+                restoreTextures(textures);
             }
         } catch (RuntimeException error) {
             failed = true;
             dispose();
             System.err.println("[onyx] Fog Blur disabled after render failure: " + error);
+        }
+    }
+
+    private static int[] saveTextures(int units) {
+        int[] textures = new int[units];
+        for (int i = 0; i < units; i++) {
+            OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit + i);
+            textures[i] = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        }
+        OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+        return textures;
+    }
+
+    private static void restoreTextures(int[] textures) {
+        for (int i = 0; i < textures.length; i++) {
+            OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit + i);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, textures[i]);
+        }
+        OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+    }
+
+    private static boolean blitSupported() {
+        try {
+            ContextCapabilities capabilities = GLContext.getCapabilities();
+            return capabilities.OpenGL30 || capabilities.GL_ARB_framebuffer_object
+                    || capabilities.GL_EXT_framebuffer_blit;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private void copyDepth(Framebuffer scene) {
+        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        ContextCapabilities capabilities = GLContext.getCapabilities();
+        if (capabilities.OpenGL30) {
+            GL30.glBindFramebuffer(READ_FRAMEBUFFER, scene.framebufferObject);
+            GL30.glBindFramebuffer(DRAW_FRAMEBUFFER, depthFbo);
+            GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+                    GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+            GL30.glBindFramebuffer(READ_FRAMEBUFFER, 0);
+            GL30.glBindFramebuffer(DRAW_FRAMEBUFFER, 0);
+        } else if (capabilities.GL_ARB_framebuffer_object) {
+            ARBFramebufferObject.glBindFramebuffer(READ_FRAMEBUFFER, scene.framebufferObject);
+            ARBFramebufferObject.glBindFramebuffer(DRAW_FRAMEBUFFER, depthFbo);
+            ARBFramebufferObject.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+                    GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+            ARBFramebufferObject.glBindFramebuffer(READ_FRAMEBUFFER, 0);
+            ARBFramebufferObject.glBindFramebuffer(DRAW_FRAMEBUFFER, 0);
+        } else {
+            EXTFramebufferObject.glBindFramebufferEXT(READ_FRAMEBUFFER, scene.framebufferObject);
+            EXTFramebufferObject.glBindFramebufferEXT(DRAW_FRAMEBUFFER, depthFbo);
+            EXTFramebufferBlit.glBlitFramebufferEXT(0, 0, width, height, 0, 0, width, height,
+                    GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+            EXTFramebufferObject.glBindFramebufferEXT(READ_FRAMEBUFFER, 0);
+            EXTFramebufferObject.glBindFramebufferEXT(DRAW_FRAMEBUFFER, 0);
         }
     }
 
@@ -97,17 +164,36 @@ public final class FogBlurRenderer {
         depth = texture(w, h, true);
         halfFbo = framebuffer(half);
         quarterFbo = framebuffer(quarter);
+        depthFbo = depthFramebuffer(depth);
         width = w;
         height = h;
+    }
+
+    private static int depthFramebuffer(int texture) {
+        int fbo = OpenGlHelper.glGenFramebuffers();
+        OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, fbo);
+        OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, DEPTH_ATTACHMENT,
+                GL11.GL_TEXTURE_2D, texture, 0);
+        GL11.glDrawBuffer(GL11.GL_NONE);
+        GL11.glReadBuffer(GL11.GL_NONE);
+        if (OpenGlHelper.glCheckFramebufferStatus(OpenGlHelper.GL_FRAMEBUFFER) != OpenGlHelper.GL_FRAMEBUFFER_COMPLETE) {
+            OpenGlHelper.glDeleteFramebuffers(fbo);
+            throw new IllegalStateException("Incomplete fog depth framebuffer");
+        }
+        GL11.glDepthMask(true);
+        GL11.glClearDepth(0.0);
+        GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+        return fbo;
     }
 
     private static int texture(int width, int height, boolean depth) {
         int texture = GL11.glGenTextures();
         bind(0, texture);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, depth ? 33190 : 32856, width, height, 0,
-                depth ? GL11.GL_DEPTH_COMPONENT : GL11.GL_RGBA, depth ? GL11.GL_FLOAT : GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, depth ? GL11.GL_DEPTH_COMPONENT : 32856, width, height, 0,
+                depth ? GL11.GL_DEPTH_COMPONENT : GL11.GL_RGBA,
+                depth ? GL11.GL_UNSIGNED_INT : GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, depth ? GL11.GL_NEAREST : GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, depth ? GL11.GL_NEAREST : GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, 0x812F);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, 0x812F);
         return texture;

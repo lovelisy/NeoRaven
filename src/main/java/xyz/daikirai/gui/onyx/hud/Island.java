@@ -220,9 +220,10 @@ public final class Island {
         float islandHeight = pillHeight + (tabList.height() - pillHeight) * tabExpansion
                 + (ChestLoot.HEIGHT - pillHeight) * chestExpansion
                 + (MusicIsland.miniHeight() - pillHeight) * musicExpansion;
-        // Interpolated width and scale can peak between the endpoints of the morph.
-        scale = Math.min(scale, Math.min((resolution.getScaledWidth() - EDGE) / islandWidth,
-                (resolution.getScaledHeight() - EDGE) / islandHeight));
+        // Every island state uses the Onyx ClickGUI safe area: 62% of the width, 72% of the height.
+        float fitWidth = resolution.getScaledWidth() * 0.62F / islandWidth;
+        float fitHeight = resolution.getScaledHeight() * 0.72F / islandHeight;
+        scale = Math.min(scale, Math.min(fitWidth, fitHeight));
         this.w = islandWidth * scale;
         this.h = islandHeight * scale;
 
@@ -898,8 +899,9 @@ public final class Island {
         float scale = module == null ? 1.0F : module.islandScale();
         float designWidth = designWidth();
         float designHeight = designHeight();
-        scale = Math.min(scale, Math.min((resolution.getScaledWidth() - EDGE) / designWidth,
-                (resolution.getScaledHeight() - EDGE) / designHeight));
+        float fitWidth = resolution.getScaledWidth() * 0.62F / designWidth;
+        float fitHeight = resolution.getScaledHeight() * 0.72F / designHeight;
+        scale = Math.min(scale, Math.min(fitWidth, fitHeight));
         float width = designWidth * scale;
         float height = designHeight * scale;
         float maxX = Math.max(0.0F, resolution.getScaledWidth() - width - EDGE);
